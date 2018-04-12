@@ -1,0 +1,1 @@
+A regular module for Keep Talking and Nobody Explodes.
