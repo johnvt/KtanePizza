@@ -1,1 +1,1 @@
-A regular module for Keep Talking and Nobody Explodes.
+A regular module for Keep Talking and Nobody Explodes. Available soon on the Steam Workshop.
