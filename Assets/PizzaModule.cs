@@ -10,7 +10,6 @@ public class PizzaModule : MonoBehaviour
     public GameObject Belt;
     public GameObject Plate;
     public KMSelectable[] Ingredients;
-    public KMSelectable TestIngredient;
     public enum Ingredient {
         Tomatoes,
         Mushrooms,
@@ -40,15 +39,14 @@ public class PizzaModule : MonoBehaviour
             {
                 var i = Rnd.Range(0, Ingredients.Length);
                 var item = new Item() { Ingredient = (Ingredient)i, Selectable = Instantiate(Ingredients[i], Belt.transform) };
-                item.Selectable.OnInteract += delegate () { GrabItem(item); return false; };
-                item.Selectable.Parent = Module;
+                var selectable = item.Selectable.GetComponent<KMSelectable>();
+                selectable.OnInteract += delegate () { GrabItem(item); return false; };
+                selectable.Parent = Module;
                 _itemsOnBelt.Add(item);
-                var children = new KMSelectable[_itemsOnBelt.Count];
                 for (i = 0; i < _itemsOnBelt.Count; i++)
                 {
-                    children[i] = _itemsOnBelt[i].Selectable;
+                    Module.Children[i] = _itemsOnBelt[i].Selectable.GetComponent<KMSelectable>();
                 }
-                Module.Children = children;
                 Module.UpdateChildren();
                 Debug.Log("Adding " + item.Ingredient.ToString() + ", there are " + _itemsOnBelt.Count + " items on the belt now.");
             }
