@@ -46,33 +46,48 @@ public class PizzaModule : MonoBehaviour
                 var i = Rnd.Range(0, Ingredients.Length);
                 var item = new Item() { Ingredient = (Ingredient)i, Instance = Instantiate(Ingredients[i], BeltNodes[0].transform) };
                 _itemsOnBelt[0] = item;
-                Debug.Log("Adding " + item.Ingredient.ToString() + ".");
+                Debug.Log(item.Ingredient.ToString() + " incoming.");
             }
 
             // If the nodes reached the starting point of the next node, reset the nodes and pass on all items to the next node
-            if (BeltNodes[0].transform.localPosition.x > -2)
+            if (BeltNodes[0].transform.localPosition.x > 4)
             {
-
-            }
-            foreach (var item in _itemsOnBelt)
-            {
-                item.Instance.transform.localPosition = new Vector3(
-                    item.Instance.transform.localPosition.x + Time.deltaTime * 5f,
-                    item.Instance.transform.localPosition.y,
-                    item.Instance.transform.localPosition.z
-                );
-            }
-
-            // Remove stuff at the end of the belt
-            for (var i = 0; i < _itemsOnBelt.Count; i++)
-            {
-                if (_itemsOnBelt[i].Instance.transform.localPosition.x > 6)
+                for (var i = BeltNodes.Length - 1; i >= 0; i--)
                 {
-                    Debug.Log("Removing " + _itemsOnBelt[i].Ingredient.ToString() + " because it reached the end of the belt, there are " + (_itemsOnBelt.Count - 1) + " items on the belt now.");
-                    Destroy(_itemsOnBelt[i].Instance.gameObject);
-                    _itemsOnBelt.RemoveAt(i);
-                    UpdateChildren();
+                    // Remove stuff at the end of the belt
+                    if (i == BeltNodes.Length - 1 && _itemsOnBelt[i] is Item)
+                    {
+                        Debug.Log(_itemsOnBelt[i].Ingredient.ToString() + " leaving.");
+                        Destroy(_itemsOnBelt[i].Instance.gameObject);
+                    }
+
+                    // Pass on
+                    if (i == 0)
+                    {
+                        _itemsOnBelt[i] = null;
+                    }
+                    else
+                    {
+                        _itemsOnBelt[i] = _itemsOnBelt[i - 1];
+                        if (_itemsOnBelt[i] is Item)
+                        {
+                            _itemsOnBelt[i].Instance.transform.parent = BeltNodes[i].transform;
+                            _itemsOnBelt[i].Instance.transform.localPosition = new Vector3(0, 0, 0);
+                        }
+                    }
+
+                    // Reset position
+                    BeltNodes[i].transform.localPosition = new Vector3(0, 0, 0);
                 }
+            }
+
+            foreach (var beltNode in BeltNodes)
+            {
+                beltNode.transform.localPosition = new Vector3(
+                    beltNode.transform.localPosition.x + Time.deltaTime * 2f,
+                    beltNode.transform.localPosition.y,
+                    beltNode.transform.localPosition.z
+                );
             }
         }
     }
