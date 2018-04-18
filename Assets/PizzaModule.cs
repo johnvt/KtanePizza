@@ -7,9 +7,9 @@ using Rnd = UnityEngine.Random;
 public class PizzaModule : MonoBehaviour
 {
     public KMSelectable Module;
-    public GameObject Belt;
-    public GameObject Plate;
-    public KMSelectable[] Ingredients;
+    public KMSelectable[] BeltNodes;
+    public KMSelectable[] PlateNodes;
+    public GameObject[] Ingredients;
     public enum Ingredient {
         Tomatoes,
         Mushrooms,
@@ -17,10 +17,16 @@ public class PizzaModule : MonoBehaviour
         Unions
     }
 
-    private List<Item> _itemsOnBelt = new List<Item>();
+    private Item[] _itemsOnBelt = new Item[3] { null, null, null };
 
     void Start()
     {
+        for (int i = 0; i < BeltNodes.Length; i++)
+        {
+            var j = i;
+            BeltNodes[i].OnInteract += delegate () { GrabItem(j); return false; };
+        }
+
         StartCoroutine(MoveBelt());
     }
 
@@ -34,36 +40,36 @@ public class PizzaModule : MonoBehaviour
         {
             yield return null;
 
-            // If there's nothing on the belt, add something
-            if (_itemsOnBelt.Count == 0)
+            // If the first node is empty, add something
+            if (_itemsOnBelt[0] == null)
             {
                 var i = Rnd.Range(0, Ingredients.Length);
-                var item = new Item() { Ingredient = (Ingredient)i, Selectable = Instantiate(Ingredients[i], Belt.transform) };
-                var selectable = item.Selectable.GetComponent<KMSelectable>();
-                selectable.OnInteract += delegate () { GrabItem(item); return false; };
-                selectable.Parent = Module;
-                _itemsOnBelt.Add(item);
-                UpdateChildren();
-                Debug.Log("Adding " + item.Ingredient.ToString() + ", there are " + _itemsOnBelt.Count + " items on the belt now.");
+                var item = new Item() { Ingredient = (Ingredient)i, Instance = Instantiate(Ingredients[i], BeltNodes[0].transform) };
+                _itemsOnBelt[0] = item;
+                Debug.Log("Adding " + item.Ingredient.ToString() + ".");
             }
 
-            // Move the belt (actually everything on it)
+            // If the nodes reached the starting point of the next node, reset the nodes and pass on all items to the next node
+            if (BeltNodes[0].transform.localPosition.x > -2)
+            {
+
+            }
             foreach (var item in _itemsOnBelt)
             {
-                item.Selectable.transform.localPosition = new Vector3(
-                    item.Selectable.transform.localPosition.x + Time.deltaTime * 5f,
-                    item.Selectable.transform.localPosition.y,
-                    item.Selectable.transform.localPosition.z
+                item.Instance.transform.localPosition = new Vector3(
+                    item.Instance.transform.localPosition.x + Time.deltaTime * 5f,
+                    item.Instance.transform.localPosition.y,
+                    item.Instance.transform.localPosition.z
                 );
             }
 
             // Remove stuff at the end of the belt
             for (var i = 0; i < _itemsOnBelt.Count; i++)
             {
-                if (_itemsOnBelt[i].Selectable.transform.localPosition.x > 6)
+                if (_itemsOnBelt[i].Instance.transform.localPosition.x > 6)
                 {
                     Debug.Log("Removing " + _itemsOnBelt[i].Ingredient.ToString() + " because it reached the end of the belt, there are " + (_itemsOnBelt.Count - 1) + " items on the belt now.");
-                    Destroy(_itemsOnBelt[i].Selectable.gameObject);
+                    Destroy(_itemsOnBelt[i].Instance.gameObject);
                     _itemsOnBelt.RemoveAt(i);
                     UpdateChildren();
                 }
@@ -71,29 +77,19 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void UpdateChildren()
+    private void GrabItem(int nodeIndex)
     {
-        Module.Children = new KMSelectable[_itemsOnBelt.Count];
-        for (var i = 0; i < _itemsOnBelt.Count; i++)
+        if (_itemsOnBelt[nodeIndex] != null)
         {
-            Module.Children[i] = _itemsOnBelt[i].Selectable.GetComponent<KMSelectable>();
-        }
-        Module.UpdateChildren();
-    }
-
-    private void GrabItem(Item item)
-    {
-        item.Selectable.transform.parent = Plate.transform;
-        item.Selectable.transform.localPosition = new Vector3(-6 + Plate.transform.childCount, 0, 0);
-        for (var i = 0; i < _itemsOnBelt.Count; i++)
-        {
-            if (_itemsOnBelt[i] == item) _itemsOnBelt.RemoveAt(i);
+            _itemsOnBelt[nodeIndex].Instance.transform.parent = PlateNodes[0].transform;
+            _itemsOnBelt[nodeIndex].Instance.transform.localPosition = new Vector3(0, 0, 0);
+            _itemsOnBelt[nodeIndex] = null;
         }
     }
 
     class Item
     {
         public Ingredient Ingredient { get; set; }
-        public KMSelectable Selectable { get; set; }
+        public GameObject Instance { get; set; }
     }
 }
