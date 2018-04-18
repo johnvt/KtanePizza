@@ -43,39 +43,52 @@ public class PizzaModule : MonoBehaviour
                 selectable.OnInteract += delegate () { GrabItem(item); return false; };
                 selectable.Parent = Module;
                 _itemsOnBelt.Add(item);
-                for (i = 0; i < _itemsOnBelt.Count; i++)
-                {
-                    Module.Children[i] = _itemsOnBelt[i].Selectable.GetComponent<KMSelectable>();
-                }
-                Module.UpdateChildren();
+                UpdateChildren();
                 Debug.Log("Adding " + item.Ingredient.ToString() + ", there are " + _itemsOnBelt.Count + " items on the belt now.");
             }
 
             // Move the belt (actually everything on it)
-            foreach (var ingredient in _itemsOnBelt)
+            foreach (var item in _itemsOnBelt)
             {
-                ingredient.Selectable.transform.localPosition = new Vector3(
-                    ingredient.Selectable.transform.localPosition.x + Time.deltaTime * 5f,
-                    ingredient.Selectable.transform.localPosition.y,
-                    ingredient.Selectable.transform.localPosition.z
+                item.Selectable.transform.localPosition = new Vector3(
+                    item.Selectable.transform.localPosition.x + Time.deltaTime * 5f,
+                    item.Selectable.transform.localPosition.y,
+                    item.Selectable.transform.localPosition.z
                 );
             }
 
             // Remove stuff at the end of the belt
-            if (_itemsOnBelt[0].Selectable.transform.localPosition.x > 6)
+            for (var i = 0; i < _itemsOnBelt.Count; i++)
             {
-                Debug.Log("Removing " + _itemsOnBelt[0].Ingredient.ToString() + " because it reached the end of the belt, there are " + (_itemsOnBelt.Count - 1) + " items on the belt now.");
-                Destroy(_itemsOnBelt[0].Selectable.gameObject);
-                _itemsOnBelt.RemoveAt(0);
+                if (_itemsOnBelt[i].Selectable.transform.localPosition.x > 6)
+                {
+                    Debug.Log("Removing " + _itemsOnBelt[i].Ingredient.ToString() + " because it reached the end of the belt, there are " + (_itemsOnBelt.Count - 1) + " items on the belt now.");
+                    Destroy(_itemsOnBelt[i].Selectable.gameObject);
+                    _itemsOnBelt.RemoveAt(i);
+                    UpdateChildren();
+                }
             }
-
         }
+    }
+
+    private void UpdateChildren()
+    {
+        Module.Children = new KMSelectable[_itemsOnBelt.Count];
+        for (var i = 0; i < _itemsOnBelt.Count; i++)
+        {
+            Module.Children[i] = _itemsOnBelt[i].Selectable.GetComponent<KMSelectable>();
+        }
+        Module.UpdateChildren();
     }
 
     private void GrabItem(Item item)
     {
         item.Selectable.transform.parent = Plate.transform;
-        item.Selectable.transform.position = new Vector3(0, 0, 0);
+        item.Selectable.transform.localPosition = new Vector3(-6 + Plate.transform.childCount, 0, 0);
+        for (var i = 0; i < _itemsOnBelt.Count; i++)
+        {
+            if (_itemsOnBelt[i] == item) _itemsOnBelt.RemoveAt(i);
+        }
     }
 
     class Item
