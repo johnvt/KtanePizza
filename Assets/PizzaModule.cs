@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 
@@ -17,14 +18,24 @@ public class PizzaModule : MonoBehaviour
         Unions
     }
 
-    private Item[] _itemsOnBelt = new Item[3] { null, null, null };
+    private List<Item> _itemsOnBelt;
+    private List<Item> _itemsOnPlate;
 
     void Start()
     {
+        _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
+        _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
+
         for (int i = 0; i < BeltNodes.Length; i++)
         {
             var j = i;
             BeltNodes[i].OnInteract += delegate () { GrabItem(j); return false; };
+        }
+
+        for (int i = 0; i < PlateNodes.Length; i++)
+        {
+            var j = i;
+            PlateNodes[i].OnInteract += delegate () { DropItem(j); return false; };
         }
 
         StartCoroutine(MoveBelt());
@@ -92,13 +103,36 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void GrabItem(int nodeIndex)
+    private void GrabItem(int beltIndex)
     {
-        if (_itemsOnBelt[nodeIndex] != null)
+        if (_itemsOnBelt[beltIndex] is Item)
         {
-            _itemsOnBelt[nodeIndex].Instance.transform.parent = PlateNodes[0].transform;
-            _itemsOnBelt[nodeIndex].Instance.transform.localPosition = new Vector3(0, 0, 0);
-            _itemsOnBelt[nodeIndex] = null;
+            var plateIndex = -1;
+            for (var i = 0; i < PlateNodes.Length; i++)
+                if (_itemsOnPlate[i] == null)
+                {
+                    plateIndex = i;
+                    break;
+                }
+
+            // No room!
+            if (plateIndex == -1) return;
+
+            // Move item from belt to plate
+            _itemsOnPlate[plateIndex] = _itemsOnBelt[beltIndex];
+            _itemsOnBelt[beltIndex].Instance.transform.parent = PlateNodes[plateIndex].transform;
+            _itemsOnBelt[beltIndex].Instance.transform.localPosition = new Vector3(0, 0, 0);
+            _itemsOnBelt[beltIndex] = null;
+        }
+    }
+
+    private void DropItem(int plateIndex)
+    {
+        if (_itemsOnPlate[plateIndex] is Item)
+        {
+            // Drop item
+            Destroy(_itemsOnPlate[plateIndex].Instance.gameObject);
+            _itemsOnPlate[plateIndex] = null;
         }
     }
 
