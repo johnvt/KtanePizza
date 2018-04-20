@@ -11,12 +11,14 @@ public class PizzaModule : MonoBehaviour
     public KMSelectable[] BeltNodes;
     public KMSelectable[] PlateNodes;
     public GameObject[] Ingredients;
-    public enum Ingredient {
+    public enum Ingredient
+    {
         Tomatoes,
         Mushrooms,
         Olives,
-        Unions
+        Onions
     }
+    public enum Status { Idle, Moving }
 
     private List<Item> _itemsOnBelt;
     private List<Item> _itemsOnPlate;
@@ -35,7 +37,7 @@ public class PizzaModule : MonoBehaviour
         for (int i = 0; i < PlateNodes.Length; i++)
         {
             var j = i;
-            PlateNodes[i].OnInteract += delegate () { DropItem(j); return false; };
+            PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
         StartCoroutine(MoveBelt());
@@ -55,9 +57,13 @@ public class PizzaModule : MonoBehaviour
             if (_itemsOnBelt[0] == null)
             {
                 var i = Rnd.Range(0, Ingredients.Length);
-                var item = new Item() { Ingredient = (Ingredient)i, Instance = Instantiate(Ingredients[i], BeltNodes[0].transform) };
+                var item = new Item()
+                {
+                    Ingredient = (Ingredient)i,
+                    Instance = Instantiate(Ingredients[i], BeltNodes[0].transform),
+                };
                 _itemsOnBelt[0] = item;
-                Debug.Log(item.Ingredient.ToString() + " incoming.");
+                //Debug.Log(item.Ingredient.ToString() + " incoming.");
             }
 
             // If the nodes reached the starting point of the next node, reset the nodes and pass on all items to the next node
@@ -68,11 +74,11 @@ public class PizzaModule : MonoBehaviour
                     // Remove stuff at the end of the belt
                     if (i == BeltNodes.Length - 1 && _itemsOnBelt[i] is Item)
                     {
-                        Debug.Log(_itemsOnBelt[i].Ingredient.ToString() + " leaving.");
+                        //Debug.Log(_itemsOnBelt[i].Ingredient.ToString() + " leaving.");
                         Destroy(_itemsOnBelt[i].Instance.gameObject);
                     }
 
-                    // Pass on
+                    // Pass items on to the next node
                     if (i == 0)
                     {
                         _itemsOnBelt[i] = null;
@@ -87,7 +93,7 @@ public class PizzaModule : MonoBehaviour
                         }
                     }
 
-                    // Reset position
+                    // Reset node positions
                     BeltNodes[i].transform.localPosition = new Vector3(0, 0, 0);
                 }
             }
@@ -103,36 +109,54 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
+    private IEnumerator MoveItem(Item item, Vector3 from, Vector3 to, float duration)
+    {
+        float elapsed = 0;
+        while (elapsed < duration)
+        {
+            yield return null;
+            elapsed += Time.deltaTime;
+            item.Instance.transform.localPosition = Vector3.Lerp(
+                from,
+                to,
+                Mathf.SmoothStep(0f, 1f, elapsed / duration)
+            );
+        }
+    }
+
     private void GrabItem(int beltIndex)
     {
-        if (_itemsOnBelt[beltIndex] is Item)
+        if (_itemsOnBelt[beltIndex] != null)
         {
-            var plateIndex = -1;
-            for (var i = 0; i < PlateNodes.Length; i++)
-                if (_itemsOnPlate[i] == null)
-                {
-                    plateIndex = i;
-                    break;
-                }
+            // Find an empty spot
+            var plateIndex = _itemsOnPlate.IndexOf(null);
 
             // No room!
             if (plateIndex == -1) return;
 
             // Move item from belt to plate
             _itemsOnPlate[plateIndex] = _itemsOnBelt[beltIndex];
-            _itemsOnBelt[beltIndex].Instance.transform.parent = PlateNodes[plateIndex].transform;
-            _itemsOnBelt[beltIndex].Instance.transform.localPosition = new Vector3(0, 0, 0);
+            _itemsOnPlate[plateIndex].Instance.transform.parent = PlateNodes[plateIndex].transform;
             _itemsOnBelt[beltIndex] = null;
+            StartCoroutine(MoveItem(_itemsOnPlate[plateIndex], _itemsOnPlate[plateIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .5f));
         }
     }
 
-    private void DropItem(int plateIndex)
+    private void ReturnItem(int plateIndex)
     {
-        if (_itemsOnPlate[plateIndex] is Item)
+        if (_itemsOnPlate[plateIndex] != null)
         {
-            // Drop item
-            Destroy(_itemsOnPlate[plateIndex].Instance.gameObject);
+            // Find an empty spot
+            var beltIndex = _itemsOnBelt.IndexOf(null);
+
+            // No room! (last spot is invalid, too close to leaving the belt and getting destroyed)
+            if (beltIndex == -1 || beltIndex == _itemsOnBelt.Count - 1) return;
+
+            // Move item from plate to belt
+            _itemsOnBelt[beltIndex] = _itemsOnPlate[plateIndex];
+            _itemsOnBelt[beltIndex].Instance.transform.parent = BeltNodes[beltIndex].transform;
             _itemsOnPlate[plateIndex] = null;
+            StartCoroutine(MoveItem(_itemsOnBelt[beltIndex], _itemsOnBelt[beltIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .3f));
         }
     }
 
