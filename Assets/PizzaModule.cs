@@ -165,4 +165,10 @@ public class PizzaModule : MonoBehaviour
         public Ingredient Ingredient { get; set; }
         public GameObject Instance { get; set; }
     }
+
+    class Pizza
+    {
+        public string Name { get; set; }
+        public List<Ingredient> Ingredients { get; set; }
+    }
 }
