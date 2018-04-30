@@ -16,15 +16,73 @@ public class PizzaModule : MonoBehaviour
         Tomatoes,
         Mushrooms,
         Olives,
-        Onions
+        Onions,
+        Basil,
+        Mozzarella,
+        BbqSauce,
+        GrilledChickenBreast,
+        RedOnions,
+        Bacon,
+        Cheddar,
+        Jalapeño,
+        Scampi,
+        BellPeppers,
+        Ham,
+        Pepperoni,
+        Mussels,
+        Tuna,
+        BlackOlives,
+        Pineapple,
+        ItalianSausage,
+        GroundBeef
     }
-    public enum Status { Idle, Moving }
 
+    private Dictionary<string, Pizza> _pizzas;
     private List<Item> _itemsOnBelt;
     private List<Item> _itemsOnPlate;
 
     void Start()
     {
+        _pizzas = new Dictionary<string, Pizza>()
+        {
+            { "Margherita", new Pizza() { Name = "Margherita", Ingredients = new List<Ingredient>() {
+                Ingredient.Tomatoes, Ingredient.Basil, Ingredient.Mozzarella
+            } } },
+            { "BBQ Chicken", new Pizza() { Name = "BBQ Chicken", Ingredients = new List<Ingredient>() {
+                Ingredient.BbqSauce, Ingredient.GrilledChickenBreast, Ingredient.RedOnions, Ingredient.Bacon, Ingredient.Mozzarella
+            } } },
+            { "Buffalo Chicken", new Pizza() { Name = "Buffalo Chicken", Ingredients = new List<Ingredient>() {
+                Ingredient.BbqSauce, Ingredient.GrilledChickenBreast, Ingredient.RedOnions, Ingredient.Cheddar, Ingredient.Mozzarella
+            } } },
+            { "Strike", new Pizza() { Name = "Strike", Ingredients = new List<Ingredient>() {
+                Ingredient.Pepperoni, Ingredient.Ham, Ingredient.BellPeppers, Ingredient.Scampi, Ingredient.Jalapeño, Ingredient.Mozzarella
+            } } },
+            { "Blow up", new Pizza() { Name = "Blow up", Ingredients = new List<Ingredient>() {
+                Ingredient.Pepperoni, Ingredient.Ham, Ingredient.BellPeppers, Ingredient.Mussels, Ingredient.Jalapeño, Ingredient.Jalapeño, Ingredient.Mozzarella
+            } } },
+            { "Frutti di Mare", new Pizza() { Name = "Frutti di Mare", Ingredients = new List<Ingredient>() {
+                Ingredient.Tuna, Ingredient.Scampi, Ingredient.Mussels, Ingredient.BlackOlives
+            } } },
+            { "Hawaii", new Pizza() { Name = "Hawaii", Ingredients = new List<Ingredient>() {
+                Ingredient.Ham, Ingredient.Bacon, Ingredient.Pineapple, Ingredient.Mozzarella
+            } } },
+            { "Meat Lovers", new Pizza() { Name = "Meat Lovers", Ingredients = new List<Ingredient>() {
+                Ingredient.Pepperoni, Ingredient.Ham, Ingredient.ItalianSausage, Ingredient.GroundBeef, Ingredient.Mozzarella
+            } } },
+            { "Veggie", new Pizza() { Name = "Veggie", Ingredients = new List<Ingredient>() {
+                Ingredient.Mushrooms, Ingredient.BellPeppers, Ingredient.Onions, Ingredient.BlackOlives, Ingredient.Tomatoes, Ingredient.Mozzarella
+            } } },
+            { "Bacon Cheddar", new Pizza() { Name = "Bacon Cheddar", Ingredients = new List<Ingredient>() {
+                Ingredient.GroundBeef, Ingredient.Bacon, Ingredient.Cheddar, Ingredient.Mozzarella
+            } } },
+            { "Tuna Delight", new Pizza() { Name = "Tuna Delight", Ingredients = new List<Ingredient>() {
+                Tuna, Red Onions, Black Olives, Mozzarella Cheese
+            } } },
+            { "Quattro Stagioni", new Pizza() { Name = "Quattro Stagioni", Ingredients = new List<Ingredient>() {
+                Artichokes, Tomatoes, Basil, Mushrooms, Ham, Mozzarella Cheese
+            } } },
+        };
+
         _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
         _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
 
