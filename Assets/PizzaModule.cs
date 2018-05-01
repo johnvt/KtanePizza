@@ -13,75 +13,114 @@ public class PizzaModule : MonoBehaviour
     public GameObject[] Ingredients;
     public enum Ingredient
     {
-        Tomatoes,
-        Mushrooms,
-        Olives,
-        Onions,
-        Basil,
-        Mozzarella,
-        BbqSauce,
-        GrilledChickenBreast,
-        RedOnions,
-        Bacon,
-        Cheddar,
-        Jalapeño,
-        Scampi,
-        BellPeppers,
-        Ham,
-        Pepperoni,
-        Mussels,
-        Tuna,
-        BlackOlives,
-        Pineapple,
-        ItalianSausage,
-        GroundBeef
+        Artichokes, Bacon, Basil, BbqSauce, BellPeppers, BlackOlives, Cheddar, GrilledChickenBreast, GroundBeef, Ham, ItalianSausage, Jalapeño, Mozzarella, Mushrooms, Mussels, Olives, Onions, Pepperoni, Pineapple, RedOnions, Scampi, Tomatoes, Tuna
+    }
+    public enum Pizza
+    {
+        Margherita, BbqChicken, BuffaloChicken, Adventure, IScream, FruttiDiMare, Hawaii, MeatLovers, Veggie, BaconCheddar, TunaDelight, QuattroStagioni
     }
 
-    private Dictionary<string, Pizza> _pizzas;
+    private Dictionary<Ingredient, string> _ingredientNames;
+    private Dictionary<Pizza, PizzaRecipe> _pizzaRecipes;
     private List<Item> _itemsOnBelt;
     private List<Item> _itemsOnPlate;
+    private List<Customer> _customers;
 
     void Start()
     {
-        _pizzas = new Dictionary<string, Pizza>()
+        _ingredientNames = new Dictionary<Ingredient, string>()
         {
-            { "Margherita", new Pizza() { Name = "Margherita", Ingredients = new List<Ingredient>() {
+            { Ingredient.Artichokes, "Artichokes" },
+            { Ingredient.Bacon, "Bacon" },
+            { Ingredient.Basil, "Basil" },
+            { Ingredient.BbqSauce, "BBQ sauce" },
+            { Ingredient.BellPeppers, "Bell peppers" },
+            { Ingredient.BlackOlives, "Black olives" },
+            { Ingredient.Cheddar, "Cheddar" },
+            { Ingredient.GrilledChickenBreast, "Grilled chicken breast" },
+            { Ingredient.GroundBeef, "Ground beef" },
+            { Ingredient.Ham, "Ham" },
+            { Ingredient.ItalianSausage, "Italian sausage" },
+            { Ingredient.Jalapeño, "Jalapeño" },
+            { Ingredient.Mozzarella, "Mozzarella" },
+            { Ingredient.Mushrooms, "Mushrooms" },
+            { Ingredient.Mussels, "Mussels" },
+            { Ingredient.Olives, "Olives" },
+            { Ingredient.Onions, "Onions" },
+            { Ingredient.Pepperoni, "Pepperoni" },
+            { Ingredient.Pineapple, "Pineapple" },
+            { Ingredient.RedOnions, "Red onions" },
+            { Ingredient.Scampi, "Scampi" },
+            { Ingredient.Tomatoes, "Tomatoes" },
+            { Ingredient.Tuna, "Tuna"}
+        };
+        _pizzaRecipes = new Dictionary<Pizza, PizzaRecipe>()
+        {
+            { Pizza.Margherita, new PizzaRecipe() { Name = "Margherita", Ingredients = new List<Ingredient>() {
                 Ingredient.Tomatoes, Ingredient.Basil, Ingredient.Mozzarella
             } } },
-            { "BBQ Chicken", new Pizza() { Name = "BBQ Chicken", Ingredients = new List<Ingredient>() {
+            { Pizza.BbqChicken, new PizzaRecipe() { Name = "BBQ Chicken", Ingredients = new List<Ingredient>() {
                 Ingredient.BbqSauce, Ingredient.GrilledChickenBreast, Ingredient.RedOnions, Ingredient.Bacon, Ingredient.Mozzarella
             } } },
-            { "Buffalo Chicken", new Pizza() { Name = "Buffalo Chicken", Ingredients = new List<Ingredient>() {
+            { Pizza.BuffaloChicken, new PizzaRecipe() { Name = "Buffalo Chicken", Ingredients = new List<Ingredient>() {
                 Ingredient.BbqSauce, Ingredient.GrilledChickenBreast, Ingredient.RedOnions, Ingredient.Cheddar, Ingredient.Mozzarella
             } } },
-            { "Strike", new Pizza() { Name = "Strike", Ingredients = new List<Ingredient>() {
+            { Pizza.Adventure, new PizzaRecipe() { Name = "Adventure", Ingredients = new List<Ingredient>() {
                 Ingredient.Pepperoni, Ingredient.Ham, Ingredient.BellPeppers, Ingredient.Scampi, Ingredient.Jalapeño, Ingredient.Mozzarella
             } } },
-            { "Blow up", new Pizza() { Name = "Blow up", Ingredients = new List<Ingredient>() {
+            { Pizza.IScream, new PizzaRecipe() { Name = "I Scream", Ingredients = new List<Ingredient>() {
                 Ingredient.Pepperoni, Ingredient.Ham, Ingredient.BellPeppers, Ingredient.Mussels, Ingredient.Jalapeño, Ingredient.Jalapeño, Ingredient.Mozzarella
             } } },
-            { "Frutti di Mare", new Pizza() { Name = "Frutti di Mare", Ingredients = new List<Ingredient>() {
+            { Pizza.FruttiDiMare, new PizzaRecipe() { Name = "Frutti di Mare", Ingredients = new List<Ingredient>() {
                 Ingredient.Tuna, Ingredient.Scampi, Ingredient.Mussels, Ingredient.BlackOlives
             } } },
-            { "Hawaii", new Pizza() { Name = "Hawaii", Ingredients = new List<Ingredient>() {
+            { Pizza.Hawaii, new PizzaRecipe() { Name = "Hawaii", Ingredients = new List<Ingredient>() {
                 Ingredient.Ham, Ingredient.Bacon, Ingredient.Pineapple, Ingredient.Mozzarella
             } } },
-            { "Meat Lovers", new Pizza() { Name = "Meat Lovers", Ingredients = new List<Ingredient>() {
+            { Pizza.MeatLovers, new PizzaRecipe() { Name = "Meat Lovers", Ingredients = new List<Ingredient>() {
                 Ingredient.Pepperoni, Ingredient.Ham, Ingredient.ItalianSausage, Ingredient.GroundBeef, Ingredient.Mozzarella
             } } },
-            { "Veggie", new Pizza() { Name = "Veggie", Ingredients = new List<Ingredient>() {
+            { Pizza.Veggie, new PizzaRecipe() { Name = "Veggie", Ingredients = new List<Ingredient>() {
                 Ingredient.Mushrooms, Ingredient.BellPeppers, Ingredient.Onions, Ingredient.BlackOlives, Ingredient.Tomatoes, Ingredient.Mozzarella
             } } },
-            { "Bacon Cheddar", new Pizza() { Name = "Bacon Cheddar", Ingredients = new List<Ingredient>() {
+            { Pizza.BaconCheddar, new PizzaRecipe() { Name = "Bacon Cheddar", Ingredients = new List<Ingredient>() {
                 Ingredient.GroundBeef, Ingredient.Bacon, Ingredient.Cheddar, Ingredient.Mozzarella
             } } },
-            { "Tuna Delight", new Pizza() { Name = "Tuna Delight", Ingredients = new List<Ingredient>() {
-                Tuna, Red Onions, Black Olives, Mozzarella Cheese
+            { Pizza.TunaDelight, new PizzaRecipe() { Name = "Tuna Delight", Ingredients = new List<Ingredient>() {
+                Ingredient.Tuna, Ingredient.RedOnions, Ingredient.BlackOlives, Ingredient.Mozzarella
             } } },
-            { "Quattro Stagioni", new Pizza() { Name = "Quattro Stagioni", Ingredients = new List<Ingredient>() {
-                Artichokes, Tomatoes, Basil, Mushrooms, Ham, Mozzarella Cheese
+            { Pizza.QuattroStagioni, new PizzaRecipe() { Name = "Quattro Stagioni", Ingredients = new List<Ingredient>() {
+                Ingredient.Artichokes, Ingredient.Tomatoes, Ingredient.Basil, Ingredient.Mushrooms, Ingredient.Ham, Ingredient.Mozzarella
             } } },
         };
+
+        _customers = new List<Customer>() {
+            new Customer { Name = "Bob", Description = "<b>Bob</b> is a vegan. There is no pleasing Bob. Don’t be like Bob. No meat, fish or dairy products. If there’s an unlit BOB, replace them with Tomatoes. If there’s a lit BOB, replace them with Mushrooms." },
+            new Customer { Name = "Carlo", Description = "<b>Carlo</b> is Italian. Never put Pineapple on his pizza. Also, replace Pepperoni with Bell Peppers*. If there’s a lit CAR, replace the order with a Margherita.<br/><small>*) in Italy, Bell Peppers are called Peperoni (one p)</small>" },
+            new Customer { Name = "Clair", Description = "<b>Clair</b> is vegetarian*. Most of the time. As a general rule, remove all meat and fish. If there’s an unlit CLR, don’t remove Bacon. If there’s a lit CLR, double up on Bacon.<br/><small>*) she does eat cheese</small>" },
+            new Customer { Name = "Frank", Description = "<b>Frank</b> is diabetic. Remove BBQ Sauce or his foot will fall off. If there’s no FRK, replace with Tomatoes. If there’s a lit FRK, replace with Basil and Tomatoes." },
+            new Customer { Name = "Frédérique", Description = "<b>Frédérique</b> is allergic to Onions and Red onions. If there’s an unlit FRQ, replace with Cheddar. If there’s a lit FRQ, replace them with Italian sausage." },
+            new Customer { Name = "Ingrid", Description = "<b>Ingrid</b> is ... strange. Always replace Onions with Red onions and the other way around. If there’s an unlit IND, replace Bell peppers with Mushrooms. If there’s a lit IND, replace Mushrooms with Bell peppers." },
+            new Customer { Name = "Melissa", Description = "<b>Melissa</b> is 10 years old. No Jalapeño. If there’s no MSA, add one Pineapple. If there’s a lit MSA, add two Pineapple." },
+            new Customer { Name = "Natasha", Description = "<b>Natasha</b> likes to spice things up. If there is no NSA, add a Jalapeño. If there is a lit NSA, add two Jalapeño." },
+            new Customer { Name = "Sandy", Description = "<b>Sandy</b> is lactose intolerant. If there’s no SND, no cheese. If there is an SND, she has taken her lactose pills. If it's unlit, just leave the cheese. If it's lit, double up on cheese." },
+            new Customer { Name = "Sigmund", Description = "<b>Sigmund</b> should not get any Italian Sausage or Mussels. Otherwise he’ll try to convince you of having a castration complex. If there’s a lit SIG, no fish. If there’s an unlit SIG, no meat." },
+            new Customer { Name = "Tyrone", Description = "<b>Tyrone</b> hungry. Always fill up as much as you can with any meat or fish. If there is an unlit TRN, use anything to fill up. If there’s a lit TRN, ignore the order completely and just throw on it whatever you please, as much as you can."}
+        };
+
+        var manual = "";
+        foreach (var pizza in _pizzaRecipes)
+        {
+            manual += "<div><b>" + pizza.Value.Name + "</b><br/>"
+                + String.Join(", ", pizza.Value.Ingredients.Select(ingredient => _ingredientNames[ingredient]).ToArray()) + "</div>";
+        }
+        Debug.Log(manual);
+        manual = "";
+        foreach (var customer in _customers)
+        {
+            manual += "<div>" + customer.Description + "</div>";
+        }
+        Debug.Log(manual);
 
         _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
         _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
@@ -224,9 +263,15 @@ public class PizzaModule : MonoBehaviour
         public GameObject Instance { get; set; }
     }
 
-    class Pizza
+    class PizzaRecipe
     {
         public string Name { get; set; }
         public List<Ingredient> Ingredients { get; set; }
+    }
+
+    class Customer
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
     }
 }

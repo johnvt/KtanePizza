@@ -10,8 +10,8 @@
 	<link rel="stylesheet" type="text/css" href="css/font.css">
 	<script src="js/highlighter.js"></script>
 	<style>
-		.flex { display: flex; margin: 0 -1rem; }
-		.flex > div { margin: 1rem; }
+		.col2 { column-count: 2; column-width: 200px; }
+		.col2 > div { break-inside: avoid; margin-bottom: .8rem; }
 		h3 { text-decoration: none; font-size: 1.4rem; }
 		h4 { text-decoration: none; }
 	</style>
@@ -30,47 +30,26 @@
 					<p class="flavour-text">Flavor <strong>text</strong>? No need.</p>
 					<p><br/><br/><br/></p>
 					<h3>Pizzas</h3>
-					<div class="flex">
+					<br/>
+					<div class="col2">
 						<div>
-							{ "Margherita", new Pizza() { Name = "Margherita", Ingredient = new List<Ingredient() {
-								Tomatoes, Basil, Mozzarella Cheese
-							} } },
-							{ "BBQ Chicken", new Pizza() { Name = "BBQ Chicken", Ingredient = new List<Ingredient() {
-								BBQ Sauce, Grilled Chicken Breast, Red Onions, Bacon, Mozzarella Cheese
-							} } },
-							{ "Buffalo Chicken", new Pizza() { Name = "Buffalo Chicken", Ingredient = new List<Ingredient() {
-								BBQ Sauce, Grilled Chicken Breast, Red Onions, Cheddar, Mozzarella Cheese
-							} } },
-							{ "Strike", new Pizza() { Name = "Strike", Ingredient = new List<Ingredient() {
-								Pepperoni, Ham, Bell Peppers, Scampi, Jalapeño, Mozzarella Cheese
-							} } },
-							{ "Blow up", new Pizza() { Name = "Blow up", Ingredient = new List<Ingredient() {
-								Pepperoni, Ham, Bell Peppers, Mussels, 2x Jalapeño, Mozzarella Cheese
-							} } },
-							{ "Frutti di Mare", new Pizza() { Name = "Frutti di Mare", Ingredient = new List<Ingredient() {
-								Tuna, Scampi, Mussels, Black Olives
-							} } },
+							<b>Margherita</b><br/>Tomatoes, Basil, Mozzarella
+						</div>
+						<div><b>BBQ Chicken</b><br/>BBQ sauce, Grilled chicken breast, Red onions, Bacon, Mozzarella
 						</div>
 						<div>
-							{ "Hawaiian", new Pizza() { Name = "Hawaiian", Ingredient = new List<Ingredient() {
-								Ham, Bacon, Pineapple, Mozzarella Cheese
-							} } },
-							{ "Meat Lovers", new Pizza() { Name = "Meat Lovers", Ingredient = new List<Ingredient() {
-								Pepperoni, Ham, Italian Sausage, Ground Beef, Mozzarella Cheese
-							} } },
-							{ "Veggie", new Pizza() { Name = "Veggie", Ingredient = new List<Ingredient() {
-								Mushrooms, Bell Peppers, Onions, Black Olives, Tomatoes, Mozzarella Cheese
-							} } },
-							{ "Bacon Cheddar", new Pizza() { Name = "Bacon Cheddar", Ingredient = new List<Ingredient() {
-								Ground Beef, Bacon, Cheddar, Mozzarella Cheese
-							} } },
-							{ "Tuna Delight", new Pizza() { Name = "Tuna Delight", Ingredient = new List<Ingredient() {
-								Tuna, Red Onions, Black Olives, Mozzarella Cheese
-							} } },
-							{ "Quattro Stagioni", new Pizza() { Name = "Quattro Stagioni", Ingredient = new List<Ingredient() {
-								Artichokes, Tomatoes, Basil, Mushrooms, Ham, Mozzarella Cheese
-							} } },
+							<b>Buffalo Chicken</b><br/>BBQ sauce, Grilled chicken breast, Red onions, Cheddar, Mozzarella
 						</div>
+						<div><b>Adventure</b><br/>Pepperoni, Ham, Bell peppers, Scampi, Jalapeño, Mozzarella</div>
+						<div><b>I Scream</b><br/>Pepperoni, Ham, Bell peppers, Mussels, 2x Jalapeño, Mozzarella
+						</div>
+						<div><b>Frutti di Mare</b><br/>Tuna, Scampi, Mussels, Black olives</div>
+						<div><b>Hawaii</b><br/>Ham, Bacon, Pineapple, Mozzarella</div>
+						<div><b>Meat Lovers</b><br/>Pepperoni, Ham, Italian sausage, Ground beef, Mozzarella</div>
+						<div><b>Veggie</b><br/>Mushrooms, Bell peppers, Onions, Black olives, Tomatoes, Mozzarella</div>
+						<div><b>Bacon Cheddar</b><br/>Ground beef, Bacon, Cheddar, Mozzarella</div>
+						<div><b>Tuna Delight</b><br/>Tuna, Red onions, Black olives, Mozzarella</div>
+						<div><b>Quattro Stagioni</b><br/>Artichokes, Tomatoes, Basil, Mushrooms, Ham, Mozzarella</div>
 					</div>
 				</div>
 				<div class="page-footer relative-footer">Page 1 of 2</div>
@@ -82,46 +61,42 @@
 				</div>
 				<div class="page-content">
 					<h3>Regular customers</h3>
-					<div class="flex">
+					<br/>
+					<div class="col2">
 						<div>
-							<p>
-								<b>Bob</b> is a vegan. There is no pleasing Bob. Don’t be like Bob. No meat, fish or dairy products. If there’s an unlit BOB, replace each with Tomatoes. If there’s a lit BOB, replace each with Mushrooms.
-							</p>
-							<p>
-								<b>Carlo</b> is Italian. Never put Pineapple on his pizza. Also, replace Pepperoni with Bell Peppers*. If there’s a lit CAR, replace the order with a Margherita.<br/>
-								<small>*) in Italy, Bell Peppers are called Peperoni (one p)</small>
-							</p>
-							<p>
-								<b>Clair</b> is vegetarian*. Except when she isn’t. As a general rule, remove all meat and fish. If there’s an unlit CLR, don’t remove Bacon. If there’s a lit CLR, double up on Bacon.<br/>
-								<small>*) she does eat cheese</small>
-							</p>
-							<p>
-								<b>Frank</b> is diabetic. Remove BBQ Sauce or his foot will fall off.
-							</p>
-							<p>
-								<b>Frédérique</b> FRQ
-							</p>
+							<b>Bob</b> is a vegan. There is no pleasing Bob. Don’t be like Bob. No meat, fish or dairy products. If there’s an unlit BOB, replace them with Tomatoes. If there’s a lit BOB, replace them with Mushrooms.
 						</div>
 						<div>
-							<p>
-								<b>Ingrid</b> IND
-							</p>
-							<p>
-								<b>Melissa</b> MSA
-							</p>
-							<p>
-								<b>Natasha</b> likes to spice things up. If there is no NSA, add a Jalapeño. If there is a lit NSA, add two Jalapeño.
-							</p>
-							<p>
-								<b>Sandy</b> is lactose intolerant. If there’s no SND, no cheese. If there is an SND, she has taken her lactose pills. If it's unlit, just leave the cheese. If it's lit, double up on cheese.
-							</p>
-							<p>
-								<b>Sigmund</b> should not get any Italian Sausage or Mussels. Otherwise he’ll try to convince you of having a castration complex.
-								SIG
-							</p>
-							<p>
-								<b>Tyrone</b> hungry. Tyrone very hungry. Always fill up as much as you can with any meat or fish. If there is an unlit TRN, use anything to fill up. If there’s a lit TRN, ignore the order completely and just throw on it whatever you please, as much as you can.
-							</p>
+							<b>Carlo</b> is Italian. Never put Pineapple on his pizza. Also, replace Pepperoni with Bell Peppers*. If there’s a lit CAR, replace the order with a Margherita.<br/>
+							<small>*) in Italy, Bell Peppers are called Peperoni (one p)</small>
+						</div>
+						<div>
+							<b>Clair</b> is vegetarian*. Most of the time. As a general rule, remove all meat and fish. If there’s an unlit CLR, don’t remove Bacon. If there’s a lit CLR, double up on Bacon.<br/>
+							<small>*) she does eat cheese</small>
+						</div>
+						<div>
+							<b>Frank</b> is diabetic. Remove BBQ Sauce or his foot will fall off. If there’s no FRK, replace with Tomatoes. If there’s a lit FRK, replace with Basil and Tomatoes.
+						</div>
+						<div>
+							<b>Frédérique</b> is allergic to Onions and Red onions. If there’s an unlit FRQ, replace with Cheddar. If there’s a lit FRQ, replace them with Italian sausage.
+						</div>
+						<div>
+							<b>Ingrid</b> is ... strange. Always replace Onions with Red onions and the other way around. If there’s an unlit IND, replace Bell peppers with Mushrooms. If there’s a lit IND, replace Mushrooms with Bell peppers.
+						</div>
+						<div>
+							<b>Melissa</b> is 10 years old. No Jalapeño. If there’s no MSA, add one Pineapple. If there’s a lit MSA, add two Pineapple.
+						</div>
+						<div>
+							<b>Natasha</b> likes to spice things up. If there is no NSA, add a Jalapeño. If there is a lit NSA, add two Jalapeño.
+						</div>
+						<div>
+							<b>Sandy</b> is lactose intolerant. If there’s no SND, no cheese. If there is an SND, she has taken her lactose pills. If it's unlit, just leave the cheese. If it's lit, double up on cheese.
+						</div>
+						<div>
+							<b>Sigmund</b> should not get any Italian Sausage or Mussels. Otherwise he’ll try to convince you of having a castration complex. If there’s a lit SIG, no fish. If there’s an unlit SIG, no meat.
+						</div>
+						<div>
+							<b>Tyrone</b> hungry. Always fill up as much as you can with any meat or fish. If there is an unlit TRN, use anything to fill up. If there’s a lit TRN, ignore the order completely and just throw on it whatever you please, as much as you can.
 						</div>
 					</div>
 				</div>
