@@ -140,7 +140,7 @@ public class PizzaModule : MonoBehaviour
             // If the first node is empty, maybe add something
             if (maybeAddSomething)
             {
-                if (Rnd.Range(0, 3) != 0)
+                if (Rnd.Range(0, 4) != 0)
                 {
                     AddItemToBelt();
                 }
@@ -182,7 +182,7 @@ public class PizzaModule : MonoBehaviour
             foreach (var beltNode in BeltNodes)
             {
                 beltNode.transform.localPosition = new Vector3(
-                    beltNode.transform.localPosition.x + Time.deltaTime * 2f,
+                    beltNode.transform.localPosition.x + Time.deltaTime * 4f,
                     beltNode.transform.localPosition.y,
                     beltNode.transform.localPosition.z
                 );
@@ -267,9 +267,60 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
+    // Check if ALL and NOTHING BUT the needed ingredients for the ordered pizza (_pizza) are on the plate (_itemsOnPlate)
     private void CheckOrder()
     {
-        // Check if ALL and NOTHING BUT the needed ingredients for the ordered pizza (_pizza) are on the plate (_itemsOnPlate)
+        var ingredientsOnPlate = _itemsOnPlate.Where(item => item is Item).Select(item => item.Ingredient).ToList();
+        var neededIngredients = _pizzaRecipes[_pizza].Ingredients;
+
+        // TESTING: always replace Mozzarella with Ham
+        for (var i = 0; i < neededIngredients.Count; i++)
+        {
+            if (neededIngredients[i] == Ingredient.Mozzarella)
+            {
+                neededIngredients[i] = Ingredient.Ham;
+            }
+        }
+
+        switch (_customer)
+        {
+            case Customer.Bob:
+                break;
+            case Customer.Carlo:
+                break;
+            case Customer.Clair:
+                break;
+            case Customer.Frank:
+                break;
+            case Customer.Frédérique:
+                break;
+            case Customer.Ingrid:
+                break;
+            case Customer.Melissa:
+                break;
+            case Customer.Natasha:
+                break;
+            case Customer.Sandy:
+                break;
+            case Customer.Sigmund:
+                break;
+            case Customer.Tyrone:
+                break;
+
+        }
+
+        if (
+            ingredientsOnPlate.Count == neededIngredients.Count &&
+            ingredientsOnPlate.All(neededIngredients.Contains) &&
+            neededIngredients.All(ingredientsOnPlate.Contains)
+        )
+        {
+            GetComponent<KMBombModule>().HandlePass();
+        }
+        else
+        {
+            GetComponent<KMBombModule>().HandleStrike();
+        }
     }
 
     class Item
@@ -288,6 +339,19 @@ public class PizzaModule : MonoBehaviour
 static class MyExtensions
 {
     public static void Shuffle<T>(this IList<T> list)
+    {
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = Rnd.Range(0, n + 1);
+            T value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+
+    public static void Remove<T>(this IList<T> list)
     {
         int n = list.Count;
         while (n > 1)
