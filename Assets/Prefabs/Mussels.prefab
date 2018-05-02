@@ -20,7 +20,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4648310100489770}
   m_Layer: 0
-  m_Name: Muchrooms
+  m_Name: Mussels
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -192,7 +192,7 @@ TextMesh:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1623754708694688}
-  m_Text: Mushrooms
+  m_Text: Mussels
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1

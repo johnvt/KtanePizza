@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 273149167f7e2ae428a315779f68b4e3
+timeCreated: 1525261813
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Covered By Your Grace
+  fontNames:
+  - Covered By Your Grace
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
