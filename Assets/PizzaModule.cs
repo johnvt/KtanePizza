@@ -3,10 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using KmHelper;
 using Rnd = UnityEngine.Random;
 
 public class PizzaModule : MonoBehaviour
 {
+    public KMBombInfo Bomb;
     public KMSelectable Module;
     public KMSelectable Order;
     public KMSelectable[] BeltNodes;
@@ -32,6 +34,7 @@ public class PizzaModule : MonoBehaviour
     private Queue<Ingredient> _queuedIngredients = new Queue<Ingredient>();
     private Pizza _pizza;
     private Customer _customer;
+    private List<Ingredient> _needed;
 
     void Start()
     {
@@ -58,7 +61,7 @@ public class PizzaModule : MonoBehaviour
             { Ingredient.RedOnions, "Red onions" },
             { Ingredient.Scampi, "Scampi" },
             { Ingredient.Tomatoes, "Tomatoes" },
-            { Ingredient.Tuna, "Tuna"}
+            { Ingredient.Tuna, "Tuna" }
         };
         _pizzaRecipes = new Dictionary<Pizza, PizzaRecipe>()
         {
@@ -105,6 +108,8 @@ public class PizzaModule : MonoBehaviour
         _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
         Order.transform.Find("Text").GetComponent<TextMesh>().text = _pizzaRecipes[_pizza].Name + "\n" + _customer;
 
+        SetNeededIngredients();
+
         _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
         _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
 
@@ -120,7 +125,7 @@ public class PizzaModule : MonoBehaviour
             PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
-        Order.OnInteract += delegate () { CheckOrder(); return false; };
+        Order.OnInteract += delegate () { CheckPlate(); return false; };
 
         StartCoroutine(MoveBelt());
     }
@@ -196,12 +201,17 @@ public class PizzaModule : MonoBehaviour
         if (_queuedIngredients.Count == 0)
         {
             var ingredients = new List<Ingredient>();
-            foreach (var pizzaRecipe in _pizzaRecipes)
+
+            // Add the needed ingredients
+            foreach (var ingredient in _pizzaRecipes[_pizza].Ingredients)
             {
-                foreach (var ingredient in pizzaRecipe.Value.Ingredients)
-                {
-                    ingredients.Add(ingredient);
-                }
+                ingredients.Add(ingredient);
+            }
+
+            // And some random stuff
+            for (var i = 0; i < 10; i++)
+            {
+                ingredients.Add((Ingredient)Rnd.Range(0, Enum.GetValues(typeof(Ingredient)).Length));
             }
 
             ingredients.Shuffle();
@@ -267,53 +277,267 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    // Check if ALL and NOTHING BUT the needed ingredients for the ordered pizza (_pizza) are on the plate (_itemsOnPlate)
-    private void CheckOrder()
+    private void SetNeededIngredients()
     {
-        var ingredientsOnPlate = _itemsOnPlate.Where(item => item is Item).Select(item => item.Ingredient).ToList();
-        var neededIngredients = _pizzaRecipes[_pizza].Ingredients;
-
-        // TESTING: always replace Mozzarella with Ham
-        for (var i = 0; i < neededIngredients.Count; i++)
-        {
-            if (neededIngredients[i] == Ingredient.Mozzarella)
-            {
-                neededIngredients[i] = Ingredient.Ham;
-            }
-        }
+        _needed = _pizzaRecipes[_pizza].Ingredients;
+        var count = _needed.Count; // this is needed because we add stuff and don’t want an endless loop
+        int i;
 
         switch (_customer)
         {
             case Customer.Bob:
+
+                // Replace meat, fish and dairy products. No BOB: replace with Bell peppers. Unlit: replace with Tomatoes. Lit: replace with Mushrooms.
+                for (i = 0; i < count; i++)
+                {
+                    if (new Ingredient[] {
+                        Ingredient.Bacon,
+                        Ingredient.Cheddar,
+                        Ingredient.GrilledChickenBreast,
+                        Ingredient.Ham,
+                        Ingredient.ItalianSausage,
+                        Ingredient.Mozzarella,
+                        Ingredient.Mussels,
+                        Ingredient.Pepperoni,
+                        Ingredient.Scampi,
+                        Ingredient.Tuna
+                    }.Contains(_needed[i]))
+                    {
+                        if (Bomb.IsIndicatorOff(Indicator.BOB))
+                        {
+                            _needed[i] = Ingredient.Tomatoes;
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.BOB))
+                        {
+                            _needed[i] = Ingredient.Mushrooms;
+                        }
+                        else
+                        {
+                            _needed[i] = Ingredient.BellPeppers;
+                        }
+                    }
+                }
                 break;
+
             case Customer.Carlo:
+
+                // Lit CAR: replace order with Margherita. Remove Pineapple. Replace Pepperoni with Bell peppers.
+                if (Bomb.IsIndicatorOn(Indicator.CAR))
+                {
+                    _needed = _pizzaRecipes[Pizza.Margherita].Ingredients;
+                }
+                else
+                {
+                    for (i = 0; i < count; i++)
+                    {
+                        if (_needed[i] == Ingredient.Pineapple)
+                        {
+                            _needed.RemoveAt(i);
+                        }
+                        else if (_needed[i] == Ingredient.Pepperoni)
+                        {
+                            _needed[i] = Ingredient.BellPeppers;
+                        }
+                    }
+                }
                 break;
+
             case Customer.Clair:
+
+                // Remove all meat and fish. But if there’s an unlit CLR, don’t remove Bacon. If there’s a lit CLR, double up on Bacon.
+                for (i = 0; i < count; i++)
+                {
+                    if (new Ingredient[] {
+                        Ingredient.GrilledChickenBreast,
+                        Ingredient.Ham,
+                        Ingredient.ItalianSausage,
+                        Ingredient.Mussels,
+                        Ingredient.Pepperoni,
+                        Ingredient.Scampi,
+                        Ingredient.Tuna
+                    }.Contains(_needed[i]))
+                    {
+                        _needed.RemoveAt(i);
+                    }
+
+                    if (_needed[i] == Ingredient.Bacon)
+                    {
+                        if (!Bomb.IsIndicatorPresent(Indicator.CLR))
+                        {
+                            _needed.RemoveAt(i);
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.CLR))
+                        {
+                            _needed.Add(Ingredient.Bacon);
+                        }
+                    }
+                }
                 break;
+
             case Customer.Frank:
+
+                // Remove BBQ Sauce. No FRK: replace with Tomatoes. Lit FRK: replace with Basil and Tomatoes.
+                for (i = 0; i < count; i++)
+                {
+                    if (_needed[i] == Ingredient.BbqSauce)
+                    {
+                        _needed.RemoveAt(i);
+                        if (!Bomb.IsIndicatorPresent(Indicator.FRK))
+                        {
+                            _needed.Add(Ingredient.Tomatoes);
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.FRK))
+                        {
+                            _needed.Add(Ingredient.Basil);
+                            _needed.Add(Ingredient.Tomatoes);
+                        }
+                    }
+                }
                 break;
+
             case Customer.Frédérique:
+
+                // No Red onions. No FRQ: replace with Cheddar. Lit FRQ: replace with Italian sausage.
+                for (i = 0; i < count; i++)
+                {
+                    if (_needed[i] == Ingredient.RedOnions)
+                    {
+                        _needed.RemoveAt(i);
+                        if (!Bomb.IsIndicatorPresent(Indicator.FRQ))
+                        {
+                            _needed.Add(Ingredient.Cheddar);
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.FRQ))
+                        {
+                            _needed.Add(Ingredient.ItalianSausage);
+                        }
+                    }
+                }
                 break;
+
             case Customer.Ingrid:
+
+                // Replace Tomatoes with Red onions and the other way around. Unlit IND: replace Bell peppers with Mushrooms. Lit IND: replace Mushrooms with Bell peppers.
+                for (i = 0; i < count; i++)
+                {
+                    if (_needed[i] == Ingredient.RedOnions)
+                    {
+                        _needed[i] = Ingredient.Tomatoes;
+                    }
+                    else if (_needed[i] == Ingredient.Tomatoes)
+                    {
+                        _needed[i] = Ingredient.RedOnions;
+                    }
+                    else if (Bomb.IsIndicatorOff(Indicator.IND) && _needed[i] == Ingredient.BellPeppers)
+                    {
+                        _needed[i] = Ingredient.Mushrooms;
+                    }
+                    else if (Bomb.IsIndicatorOn(Indicator.IND) && _needed[i] == Ingredient.Mushrooms)
+                    {
+                        _needed[i] = Ingredient.BellPeppers;
+                    }
+                }
                 break;
+
             case Customer.Melissa:
+
+                // No Jalapeño or Pepperoni. No MSA: add one Pineapple. Lit MSA: add two Pineapple.
+                for (i = 0; i < count; i++)
+                {
+                    if (new Ingredient[] { Ingredient.Jalapeño, Ingredient.Pepperoni }.Contains(_needed[i]))
+                    {
+                        _needed.RemoveAt(i);
+                    }
+                }
+                if (!Bomb.IsIndicatorPresent(Indicator.MSA))
+                {
+                    _needed.Add(Ingredient.Pineapple);
+                }
+                else if (Bomb.IsIndicatorOn(Indicator.MSA))
+                {
+                    _needed.Add(Ingredient.Pineapple);
+                    _needed.Add(Ingredient.Pineapple);
+                }
                 break;
+
+            // No NSA: add a Jalapeño. Lit NSA: add two Jalapeño.
             case Customer.Natasha:
+                for (i = 0; i < count; i++)
+                {
+                    if (!Bomb.IsIndicatorPresent(Indicator.NSA))
+                    {
+                        _needed.Add(Ingredient.Jalapeño);
+                    }
+                    else if (Bomb.IsIndicatorOn(Indicator.NSA))
+                    {
+                        _needed.Add(Ingredient.Jalapeño);
+                        _needed.Add(Ingredient.Jalapeño);
+                    }
+                }
                 break;
+
             case Customer.Sandy:
+
+                // No SND: no cheese. Lit SND: double up on cheese.
+                for (i = 0; i < count; i++)
+                {
+                    if (new Ingredient[] { Ingredient.Mozzarella, Ingredient.Cheddar }.Contains(_needed[i]))
+                    {
+                        if (!Bomb.IsIndicatorPresent(Indicator.SND))
+                        {
+                            _needed.RemoveAt(i);
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.SND))
+                        {
+                            _needed.Add(_needed[i]);
+                        }
+                    }
+                }
                 break;
             case Customer.Sigmund:
+
+                // No Italian Sausage or Mussels. Lit SIG: no fish. Unlit SIG, no meat.
+                for (i = 0; i < count; i++)
+                {
+                    if (new Ingredient[] { Ingredient.ItalianSausage, Ingredient.Mussels }.Contains(_needed[i]))
+                    {
+                        _needed.RemoveAt(i);
+                    }
+
+                    if (Bomb.IsIndicatorOn(Indicator.SIG)
+                        && new Ingredient[] { Ingredient.Scampi, Ingredient.Tuna }.Contains(_needed[i]))
+                    {
+                        _needed.RemoveAt(i);
+                    }
+                    else if (Bomb.IsIndicatorOff(Indicator.SIG)
+                        && new Ingredient[] { Ingredient.Bacon, Ingredient.GrilledChickenBreast, Ingredient.Ham, Ingredient.Pepperoni }.Contains(_needed[i]))
+                    {
+                        _needed.RemoveAt(i);
+                    }
+                }
                 break;
             case Customer.Tyrone:
+                if (Bomb.IsIndicatorOn(Indicator.TRN) && Bomb.GetBatteryCount() == 0)
+                {
+                    _needed.Clear();
+                }
                 break;
 
         }
+    }
 
-        if (
-            ingredientsOnPlate.Count == neededIngredients.Count &&
-            ingredientsOnPlate.All(neededIngredients.Contains) &&
-            neededIngredients.All(ingredientsOnPlate.Contains)
-        )
+    private void CheckPlate()
+    {
+        var have = _itemsOnPlate.Where(item => item is Item).Select(item => item.Ingredient).ToList();
+
+        // Special rule for Tyrone. He has random stuff on his plate.
+        if (_customer == Customer.Tyrone)
+        {
+            for
+        }
+
+        // Check if ALL and NOTHING BUT the needed ingredients for the ordered pizza are on the plate
+        if (_needed.OrderBy(x => x).SequenceEqual(have.OrderBy(x => x)))
         {
             GetComponent<KMBombModule>().HandlePass();
         }
@@ -334,24 +558,33 @@ public class PizzaModule : MonoBehaviour
         public string Name { get; set; }
         public List<Ingredient> Ingredients { get; set; }
     }
+
+    public void ReplaceIngredient(List<Ingredient> list, Ingredient from, Ingredient to)
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] == from)
+            {
+                list[i] = to;
+            }
+        }
+    }
+
+    public void RemoveIngredient(List<Ingredient> list, Ingredient remove)
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] == remove)
+            {
+                list.RemoveAt(i);
+            }
+        }
+    }
 }
 
 static class MyExtensions
 {
     public static void Shuffle<T>(this IList<T> list)
-    {
-        int n = list.Count;
-        while (n > 1)
-        {
-            n--;
-            int k = Rnd.Range(0, n + 1);
-            T value = list[k];
-            list[k] = list[n];
-            list[n] = value;
-        }
-    }
-
-    public static void Remove<T>(this IList<T> list)
     {
         int n = list.Count;
         while (n > 1)
