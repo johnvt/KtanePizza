@@ -35,9 +35,13 @@ public class PizzaModule : MonoBehaviour
     private Pizza _pizza;
     private Customer _customer;
     private List<Ingredient> _needed;
+    private int _moduleId;
+    private static int _moduleIdCounter = 1;
 
     void Start()
     {
+        _moduleId = _moduleIdCounter++;
+
         Order.transform.Find("Text").GetComponent<TextMesh>().text = "";
 
         _ingredientNames = new Dictionary<Ingredient, string>()
@@ -103,12 +107,7 @@ public class PizzaModule : MonoBehaviour
             } } },
         };
 
-        // Random order
-        _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
-        _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
-        Order.transform.Find("Text").GetComponent<TextMesh>().text = _pizzaRecipes[_pizza].Name + "\n" + _customer;
-
-        SetNeededIngredients();
+        GenerateOrder();
 
         _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
         _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
@@ -125,9 +124,30 @@ public class PizzaModule : MonoBehaviour
             PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
-        Order.OnInteract += delegate () { CheckPlate(); return false; };
+        Order.OnInteract += delegate () { HandleOrder(); return false; };
 
         StartCoroutine(MoveBelt());
+    }
+
+    private void HandleOrder()
+    {
+        if (CheckPlate())
+        {
+            GetComponent<KMBombModule>().HandlePass();
+            Debug.LogFormat("[Pizza #{0}] Pizza served: {1}. {2} is happy!",
+                _moduleId,
+                _pizzaRecipes[_pizza].Name,
+                _customer);
+        }
+        else
+        {
+            GetComponent<KMBombModule>().HandleStrike();
+            Debug.LogFormat("[Pizza #{0}] Pizza served: {1}. You used the following ingredients: {2}. That’s not what {3} wanted. {3} sad.",
+                _moduleId,
+                _pizzaRecipes[_pizza].Name,
+                String.Join(", ", _itemsOnPlate.Where(x => x is Item).Select(x => _ingredientNames[x.Ingredient]).ToArray()),
+                _customer);
+        }
     }
 
     void Update()
@@ -187,7 +207,7 @@ public class PizzaModule : MonoBehaviour
             foreach (var beltNode in BeltNodes)
             {
                 beltNode.transform.localPosition = new Vector3(
-                    beltNode.transform.localPosition.x + Time.deltaTime * 4f,
+                    beltNode.transform.localPosition.x + Time.deltaTime * 2f,
                     beltNode.transform.localPosition.y,
                     beltNode.transform.localPosition.z
                 );
@@ -200,22 +220,27 @@ public class PizzaModule : MonoBehaviour
         // Refresh queued ingredients
         if (_queuedIngredients.Count == 0)
         {
-            var ingredients = new List<Ingredient>();
+            // Start with the needed ingredients
+            var ingredients = new List<Ingredient>(_needed);
 
-            // Add the needed ingredients
-            foreach (var ingredient in _pizzaRecipes[_pizza].Ingredients)
-            {
-                ingredients.Add(ingredient);
-            }
-
-            // And some random stuff
+            // And some random OTHER stuff
+            Ingredient ingredient;
             for (var i = 0; i < 10; i++)
             {
-                ingredients.Add((Ingredient)Rnd.Range(0, Enum.GetValues(typeof(Ingredient)).Length));
+                do
+                {
+                    ingredient = (Ingredient)Rnd.Range(0, Enum.GetValues(typeof(Ingredient)).Length);
+                }
+                while (_needed.Contains(ingredient));
+
+                ingredients.Add(ingredient);
             }
 
             ingredients.Shuffle();
             _queuedIngredients = new Queue<Ingredient>(ingredients);
+            Debug.LogFormat("[Pizza #{0}] Adding to queue: {1}", _moduleId,
+                String.Join(", ", _queuedIngredients.Select(x => _ingredientNames[x]).ToArray()));
+
         }
 
         // Add item to belt
@@ -277,10 +302,15 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void SetNeededIngredients()
+    private void GenerateOrder()
     {
+        // Random order
+        _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
+        _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
+
+        Order.transform.Find("Text").GetComponent<TextMesh>().text = _pizzaRecipes[_pizza].Name + "\n" + _customer;
+
         _needed = _pizzaRecipes[_pizza].Ingredients;
-        var count = _needed.Count; // this is needed because we add stuff and don’t want an endless loop
         int i;
 
         switch (_customer)
@@ -288,7 +318,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Bob:
 
                 // Replace meat, fish and dairy products. No BOB: replace with Bell peppers. Unlit: replace with Tomatoes. Lit: replace with Mushrooms.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (new Ingredient[] {
                         Ingredient.Bacon,
@@ -328,7 +358,7 @@ public class PizzaModule : MonoBehaviour
                 }
                 else
                 {
-                    for (i = 0; i < count; i++)
+                    for (i = _needed.Count - 1; i >= 0; i--)
                     {
                         if (_needed[i] == Ingredient.Pineapple)
                         {
@@ -345,7 +375,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Clair:
 
                 // Remove all meat and fish. But if there’s an unlit CLR, don’t remove Bacon. If there’s a lit CLR, double up on Bacon.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (new Ingredient[] {
                         Ingredient.GrilledChickenBreast,
@@ -377,7 +407,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Frank:
 
                 // Remove BBQ Sauce. No FRK: replace with Tomatoes. Lit FRK: replace with Basil and Tomatoes.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (_needed[i] == Ingredient.BbqSauce)
                     {
@@ -398,7 +428,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Frédérique:
 
                 // No Red onions. No FRQ: replace with Cheddar. Lit FRQ: replace with Italian sausage.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (_needed[i] == Ingredient.RedOnions)
                     {
@@ -418,7 +448,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Ingrid:
 
                 // Replace Tomatoes with Red onions and the other way around. Unlit IND: replace Bell peppers with Mushrooms. Lit IND: replace Mushrooms with Bell peppers.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (_needed[i] == Ingredient.RedOnions)
                     {
@@ -442,7 +472,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Melissa:
 
                 // No Jalapeño or Pepperoni. No MSA: add one Pineapple. Lit MSA: add two Pineapple.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (new Ingredient[] { Ingredient.Jalapeño, Ingredient.Pepperoni }.Contains(_needed[i]))
                     {
@@ -460,9 +490,10 @@ public class PizzaModule : MonoBehaviour
                 }
                 break;
 
-            // No NSA: add a Jalapeño. Lit NSA: add two Jalapeño.
             case Customer.Natasha:
-                for (i = 0; i < count; i++)
+
+                // No NSA: add a Jalapeño. Lit NSA: add two Jalapeño.
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (!Bomb.IsIndicatorPresent(Indicator.NSA))
                     {
@@ -479,7 +510,7 @@ public class PizzaModule : MonoBehaviour
             case Customer.Sandy:
 
                 // No SND: no cheese. Lit SND: double up on cheese.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (new Ingredient[] { Ingredient.Mozzarella, Ingredient.Cheddar }.Contains(_needed[i]))
                     {
@@ -494,10 +525,11 @@ public class PizzaModule : MonoBehaviour
                     }
                 }
                 break;
+
             case Customer.Sigmund:
 
                 // No Italian Sausage or Mussels. Lit SIG: no fish. Unlit SIG, no meat.
-                for (i = 0; i < count; i++)
+                for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (new Ingredient[] { Ingredient.ItalianSausage, Ingredient.Mussels }.Contains(_needed[i]))
                     {
@@ -516,7 +548,11 @@ public class PizzaModule : MonoBehaviour
                     }
                 }
                 break;
+
             case Customer.Tyrone:
+
+                // Lit TRN and no batteries: ignore the order
+                // More special handling in CheckPlate()
                 if (Bomb.IsIndicatorOn(Indicator.TRN) && Bomb.GetBatteryCount() == 0)
                 {
                     _needed.Clear();
@@ -524,27 +560,81 @@ public class PizzaModule : MonoBehaviour
                 break;
 
         }
+
+        var neededLog = _needed.Select(x => _ingredientNames[x]).ToList();
+        if (_customer == Customer.Tyrone)
+        {
+            neededLog.Add(Bomb.IsIndicatorPresent(Indicator.TRN) ? "anything to fill up" : "any meat or fish to fill up");
+        }
+        Debug.LogFormat("[Pizza #{0}] Incoming order: {1} for {2}. We need {3}.",
+            _moduleId,
+            _pizzaRecipes[_pizza].Name,
+            _customer,
+            String.Join(", ", neededLog.ToArray()));
     }
 
-    private void CheckPlate()
+    private bool CheckPlate()
     {
         var have = _itemsOnPlate.Where(item => item is Item).Select(item => item.Ingredient).ToList();
 
-        // Special rule for Tyrone. He has random stuff on his plate.
+        // Special handling for Tyrone
         if (_customer == Customer.Tyrone)
         {
-            for
+            // His plate should always be full
+            if (have.Count < PlateNodes.Length)
+            {
+                return false;
+            }
+
+            // Lit TRN and no batteries: ignore the order
+            if (!(Bomb.IsIndicatorOn(Indicator.TRN) && Bomb.GetBatteryCount() == 0))
+            {
+                // Otherwise check each needed ingredient and remove it from the checklist
+                for (var i = 0; i < _needed.Count; i++)
+                {
+                    if (have.IndexOf(_needed[i]) == -1)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        have.RemoveAt(have.IndexOf(_needed[i]));
+                    }
+                }
+            }
+
+            // No TRN: can only be filled up with meat or fish
+            if (!Bomb.IsIndicatorPresent(Indicator.TRN))
+            {
+                foreach (var ingredient in have)
+                {
+                    if (!(new Ingredient[] {
+                        Ingredient.Bacon,
+                        Ingredient.GrilledChickenBreast,
+                        Ingredient.Ham,
+                        Ingredient.ItalianSausage,
+                        Ingredient.Mussels,
+                        Ingredient.Pepperoni,
+                        Ingredient.Scampi,
+                        Ingredient.Tuna
+                    }.Contains(ingredient)))
+                    {
+                        return false;
+                    }
+                }
+            }
         }
 
         // Check if ALL and NOTHING BUT the needed ingredients for the ordered pizza are on the plate
-        if (_needed.OrderBy(x => x).SequenceEqual(have.OrderBy(x => x)))
-        {
-            GetComponent<KMBombModule>().HandlePass();
-        }
         else
         {
-            GetComponent<KMBombModule>().HandleStrike();
+            if (!_needed.OrderBy(x => x).SequenceEqual(have.OrderBy(x => x)))
+            {
+                return false;
+            }
         }
+
+        return true;
     }
 
     class Item
