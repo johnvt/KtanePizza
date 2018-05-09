@@ -28,21 +28,27 @@ public class PizzaModule : MonoBehaviour
     };
 
     private Dictionary<Ingredient, string> _ingredientNames;
-    private Dictionary<Pizza, PizzaRecipe> _pizzaRecipes;
+    private Dictionary<Pizza?, PizzaRecipe> _pizzaRecipes;
     private List<Item> _itemsOnBelt;
     private List<Item> _itemsOnPlate;
     private Queue<Ingredient> _queuedIngredients = new Queue<Ingredient>();
-    private Pizza _pizza;
-    private Customer _customer;
-    private List<Ingredient> _needed;
+    private Pizza? _pizza;
+    private Customer? _customer;
+    private List<Ingredient> _needed = new List<Ingredient>();
+
     private int _moduleId;
     private static int _moduleIdCounter = 1;
+
+    private float _beltSpeed = 2f;
+    private float _chanceToAddItem = 1f;
+    private float _minWaitForNextOrder = 2f;
+    private float _maxWaitForNextOrder = 8f;
+    private float _minOrderDuration = 60f;
+    private float _maxOrderDuration = 90f;
 
     void Start()
     {
         _moduleId = _moduleIdCounter++;
-
-        Order.transform.Find("Text").GetComponent<TextMesh>().text = "";
 
         _ingredientNames = new Dictionary<Ingredient, string>()
         {
@@ -67,7 +73,7 @@ public class PizzaModule : MonoBehaviour
             { Ingredient.Tomatoes, "Tomatoes" },
             { Ingredient.Tuna, "Tuna" }
         };
-        _pizzaRecipes = new Dictionary<Pizza, PizzaRecipe>()
+        _pizzaRecipes = new Dictionary<Pizza?, PizzaRecipe>()
         {
             { Pizza.Margherita, new PizzaRecipe() { Name = "Margherita", Ingredients = new List<Ingredient>() {
                 Ingredient.Tomatoes, Ingredient.Basil, Ingredient.Mozzarella
@@ -107,8 +113,6 @@ public class PizzaModule : MonoBehaviour
             } } },
         };
 
-        GenerateOrder();
-
         _itemsOnBelt = Enumerable.Repeat((Item)null, BeltNodes.Length).ToList();
         _itemsOnPlate = Enumerable.Repeat((Item)null, PlateNodes.Length).ToList();
 
@@ -124,30 +128,10 @@ public class PizzaModule : MonoBehaviour
             PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
-        Order.OnInteract += delegate () { HandleOrder(); return false; };
+        Order.OnInteract += delegate () { ServeOrder(); return false; };
 
         StartCoroutine(MoveBelt());
-    }
-
-    private void HandleOrder()
-    {
-        if (CheckPlate())
-        {
-            GetComponent<KMBombModule>().HandlePass();
-            Debug.LogFormat("[Pizza #{0}] Pizza served: {1}. {2} is happy!",
-                _moduleId,
-                _pizzaRecipes[_pizza].Name,
-                _customer);
-        }
-        else
-        {
-            GetComponent<KMBombModule>().HandleStrike();
-            Debug.LogFormat("[Pizza #{0}] Pizza served: {1}. You used the following ingredients: {2}. That’s not what {3} wanted. {3} sad.",
-                _moduleId,
-                _pizzaRecipes[_pizza].Name,
-                String.Join(", ", _itemsOnPlate.Where(x => x is Item).Select(x => _ingredientNames[x.Ingredient]).ToArray()),
-                _customer);
-        }
+        StartCoroutine(PlaceOrders());
     }
 
     void Update()
@@ -165,7 +149,7 @@ public class PizzaModule : MonoBehaviour
             // If the first node is empty, maybe add something
             if (maybeAddSomething)
             {
-                if (Rnd.Range(0, 4) != 0)
+                if (Rnd.Range(0f, 1f) < _chanceToAddItem)
                 {
                     AddItemToBelt();
                 }
@@ -207,7 +191,7 @@ public class PizzaModule : MonoBehaviour
             foreach (var beltNode in BeltNodes)
             {
                 beltNode.transform.localPosition = new Vector3(
-                    beltNode.transform.localPosition.x + Time.deltaTime * 2f,
+                    beltNode.transform.localPosition.x + Time.deltaTime * _beltSpeed,
                     beltNode.transform.localPosition.y,
                     beltNode.transform.localPosition.z
                 );
@@ -215,99 +199,32 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void AddItemToBelt()
+    private IEnumerator PlaceOrders()
     {
-        // Refresh queued ingredients
-        if (_queuedIngredients.Count == 0)
-        {
-            // Start with the needed ingredients
-            var ingredients = new List<Ingredient>(_needed);
+        RemoveOrder();
 
-            // And some random OTHER stuff
-            Ingredient ingredient;
-            for (var i = 0; i < 10; i++)
+        while (true)
+        {
+            yield return new WaitForSeconds(.1f);
+            if (_customer == null)
             {
-                do
-                {
-                    ingredient = (Ingredient)Rnd.Range(0, Enum.GetValues(typeof(Ingredient)).Length);
-                }
-                while (_needed.Contains(ingredient));
-
-                ingredients.Add(ingredient);
+                yield return new WaitForSeconds(Rnd.Range(_minWaitForNextOrder, _maxWaitForNextOrder));
+                StartCoroutine(PlaceOrder());
             }
-
-            ingredients.Shuffle();
-            _queuedIngredients = new Queue<Ingredient>(ingredients);
-            Debug.LogFormat("[Pizza #{0}] Adding to queue: {1}", _moduleId,
-                String.Join(", ", _queuedIngredients.Select(x => _ingredientNames[x]).ToArray()));
-
         }
 
-        // Add item to belt
-        _itemsOnBelt[0] = new Item()
-        {
-            Ingredient = _queuedIngredients.Peek(),
-            Instance = Instantiate(Ingredients[(int)_queuedIngredients.Dequeue()], BeltNodes[0].transform),
-        };
     }
 
-    private IEnumerator MoveItem(Item item, Vector3 from, Vector3 to, float duration)
-    {
-        float elapsed = 0;
-        while (elapsed < duration)
-        {
-            yield return null;
-            elapsed += Time.deltaTime;
-            item.Instance.transform.localPosition = Vector3.Lerp(
-                from,
-                to,
-                Mathf.SmoothStep(0f, 1f, elapsed / duration)
-            );
-        }
-    }
-
-    private void GrabItem(int beltIndex)
-    {
-        if (_itemsOnBelt[beltIndex] != null)
-        {
-            // Find an empty spot
-            var plateIndex = _itemsOnPlate.IndexOf(null);
-
-            // No room!
-            if (plateIndex == -1) return;
-
-            // Move item from belt to plate
-            _itemsOnPlate[plateIndex] = _itemsOnBelt[beltIndex];
-            _itemsOnPlate[plateIndex].Instance.transform.parent = PlateNodes[plateIndex].transform;
-            _itemsOnBelt[beltIndex] = null;
-            StartCoroutine(MoveItem(_itemsOnPlate[plateIndex], _itemsOnPlate[plateIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .5f));
-        }
-    }
-
-    private void ReturnItem(int plateIndex)
-    {
-        if (_itemsOnPlate[plateIndex] != null)
-        {
-            // Find an empty spot
-            var beltIndex = _itemsOnBelt.IndexOf(null);
-
-            // No room! (last spot is invalid, too close to leaving the belt and getting destroyed)
-            if (beltIndex == -1 || beltIndex == _itemsOnBelt.Count - 1) return;
-
-            // Move item from plate to belt
-            _itemsOnBelt[beltIndex] = _itemsOnPlate[plateIndex];
-            _itemsOnBelt[beltIndex].Instance.transform.parent = BeltNodes[beltIndex].transform;
-            _itemsOnPlate[plateIndex] = null;
-            StartCoroutine(MoveItem(_itemsOnBelt[beltIndex], _itemsOnBelt[beltIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .3f));
-        }
-    }
-
-    private void GenerateOrder()
+    private IEnumerator PlaceOrder()
     {
         // Random order
         _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
         _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
 
+        Order.transform.Find("Plane").GetComponent<Renderer>().enabled = true;
+        Order.transform.Find("for").GetComponent<Renderer>().enabled = true;
+        Order.transform.Find("Timer").GetComponent<Renderer>().enabled = true;
+        Order.transform.Find("Text").GetComponent<Renderer>().enabled = true;
         Order.transform.Find("Text").GetComponent<TextMesh>().text = _pizzaRecipes[_pizza].Name + "\n" + _customer;
 
         _needed = _pizzaRecipes[_pizza].Ingredients;
@@ -493,17 +410,14 @@ public class PizzaModule : MonoBehaviour
             case Customer.Natasha:
 
                 // No NSA: add a Jalapeño. Lit NSA: add two Jalapeño.
-                for (i = _needed.Count - 1; i >= 0; i--)
+                if (!Bomb.IsIndicatorPresent(Indicator.NSA))
                 {
-                    if (!Bomb.IsIndicatorPresent(Indicator.NSA))
-                    {
-                        _needed.Add(Ingredient.Jalapeño);
-                    }
-                    else if (Bomb.IsIndicatorOn(Indicator.NSA))
-                    {
-                        _needed.Add(Ingredient.Jalapeño);
-                        _needed.Add(Ingredient.Jalapeño);
-                    }
+                    _needed.Add(Ingredient.Jalapeño);
+                }
+                else if (Bomb.IsIndicatorOn(Indicator.NSA))
+                {
+                    _needed.Add(Ingredient.Jalapeño);
+                    _needed.Add(Ingredient.Jalapeño);
                 }
                 break;
 
@@ -561,6 +475,8 @@ public class PizzaModule : MonoBehaviour
 
         }
 
+        RefreshQueuedIngredients();
+
         var neededLog = _needed.Select(x => _ingredientNames[x]).ToList();
         if (_customer == Customer.Tyrone)
         {
@@ -571,6 +487,145 @@ public class PizzaModule : MonoBehaviour
             _pizzaRecipes[_pizza].Name,
             _customer,
             String.Join(", ", neededLog.ToArray()));
+
+        var elapsed = 0f;
+        var duration = Rnd.Range(_minOrderDuration, _maxOrderDuration);
+        while (elapsed < duration)
+        {
+            yield return null;
+            elapsed += Time.deltaTime;
+            Order.transform.Find("Timer").GetComponent<TextMesh>().text = Math.Ceiling(duration - elapsed).ToString();
+        }
+
+        RemoveOrder();
+    }
+
+    private IEnumerator MoveItem(Item item, Vector3 from, Vector3 to, float duration)
+    {
+        float elapsed = 0;
+        while (elapsed < duration)
+        {
+            yield return null;
+
+            if (item.Instance == null) yield break;
+            elapsed += Time.deltaTime;
+            item.Instance.transform.localPosition = Vector3.Lerp(
+                from,
+                to,
+                Mathf.SmoothStep(0f, 1f, elapsed / duration)
+            );
+        }
+    }
+
+    private void AddItemToBelt()
+    {
+        // Refresh queued ingredients
+        if (_queuedIngredients.Count == 0)
+        {
+            RefreshQueuedIngredients();
+        }
+
+        // Add item to belt
+        _itemsOnBelt[0] = new Item()
+        {
+            Ingredient = _queuedIngredients.Peek(),
+            Instance = Instantiate(Ingredients[(int)_queuedIngredients.Dequeue()], BeltNodes[0].transform),
+        };
+    }
+
+    private void RefreshQueuedIngredients()
+    {
+        // Start with the needed ingredients
+        var ingredients = _needed.Count > 0 ? new List<Ingredient>(_needed) : new List<Ingredient>();
+
+        // And some random OTHER stuff
+        Ingredient ingredient;
+        for (var i = 0; i < 10; i++)
+        {
+            do
+            {
+                ingredient = (Ingredient)Rnd.Range(0, Enum.GetValues(typeof(Ingredient)).Length);
+            }
+            while (_needed.Contains(ingredient));
+
+            ingredients.Add(ingredient);
+        }
+
+        ingredients.Shuffle();
+        _queuedIngredients = new Queue<Ingredient>(ingredients);
+        Debug.LogFormat("[Pizza #{0}] Adding to queue: {1}", _moduleId,
+            String.Join(", ", _queuedIngredients.Select(x => _ingredientNames[x]).ToArray()));
+    }
+
+    private void GrabItem(int beltIndex)
+    {
+        if (_itemsOnBelt[beltIndex] != null)
+        {
+            // Find an empty spot
+            var plateIndex = _itemsOnPlate.IndexOf(null);
+
+            // No room!
+            if (plateIndex == -1) return;
+
+            // Move item from belt to plate
+            _itemsOnPlate[plateIndex] = _itemsOnBelt[beltIndex];
+            _itemsOnPlate[plateIndex].Instance.transform.parent = PlateNodes[plateIndex].transform;
+            _itemsOnBelt[beltIndex] = null;
+            StartCoroutine(MoveItem(_itemsOnPlate[plateIndex], _itemsOnPlate[plateIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .5f));
+        }
+    }
+
+    private void ReturnItem(int plateIndex)
+    {
+        if (_itemsOnPlate[plateIndex] != null)
+        {
+            // Find an empty spot
+            var beltIndex = _itemsOnBelt.IndexOf(null);
+
+            // No room! (last spot is invalid, too close to leaving the belt and getting destroyed)
+            if (beltIndex == -1 || beltIndex == _itemsOnBelt.Count - 1) return;
+
+            // Move item from plate to belt
+            _itemsOnBelt[beltIndex] = _itemsOnPlate[plateIndex];
+            _itemsOnBelt[beltIndex].Instance.transform.parent = BeltNodes[beltIndex].transform;
+            _itemsOnPlate[plateIndex] = null;
+            StartCoroutine(MoveItem(_itemsOnBelt[beltIndex], _itemsOnBelt[beltIndex].Instance.transform.localPosition, new Vector3(0, 0, 0), .3f));
+        }
+    }
+
+    private void ServeOrder()
+    {
+        if (_customer == null) return;
+
+        if (CheckPlate())
+        {
+            Debug.LogFormat("[Pizza #{0}] {1} wanted a {2}. {1} got a {2}. {1} happy!",
+                _moduleId,
+                _customer,
+                _pizzaRecipes[_pizza].Name);
+            GetComponent<KMBombModule>().HandlePass();
+        }
+        else
+        {
+            Debug.LogFormat("[Pizza #{0}] {1} wanted a {2}. You used these ingredients: {3}. That’s not what {1} wanted. {1} sad.",
+                _moduleId,
+                _customer,
+                _pizzaRecipes[_pizza].Name,
+                String.Join(", ", _itemsOnPlate.Where(x => x is Item).Select(x => _ingredientNames[x.Ingredient]).ToArray()));
+            GetComponent<KMBombModule>().HandleStrike();
+        }
+        RemoveOrder();
+
+        // Empty plate
+        for (var i = 0; i < _itemsOnPlate.Count; i++)
+        {
+            if (_itemsOnPlate[i] is Item)
+            {
+                Destroy(_itemsOnPlate[i].Instance.gameObject);
+                _itemsOnPlate[i] = null;
+            }
+        }
+
     }
 
     private bool CheckPlate()
@@ -637,6 +692,16 @@ public class PizzaModule : MonoBehaviour
         return true;
     }
 
+    private void RemoveOrder()
+    {
+        _customer = null;
+        _pizza = null;
+        Order.transform.Find("Plane").GetComponent<Renderer>().enabled = false;
+        Order.transform.Find("Text").GetComponent<Renderer>().enabled = false;
+        Order.transform.Find("for").GetComponent<Renderer>().enabled = false;
+        Order.transform.Find("Timer").GetComponent<Renderer>().enabled = false;
+    }
+
     class Item
     {
         public Ingredient Ingredient { get; set; }
@@ -647,28 +712,6 @@ public class PizzaModule : MonoBehaviour
     {
         public string Name { get; set; }
         public List<Ingredient> Ingredients { get; set; }
-    }
-
-    public void ReplaceIngredient(List<Ingredient> list, Ingredient from, Ingredient to)
-    {
-        for (var i = 0; i < list.Count; i++)
-        {
-            if (list[i] == from)
-            {
-                list[i] = to;
-            }
-        }
-    }
-
-    public void RemoveIngredient(List<Ingredient> list, Ingredient remove)
-    {
-        for (var i = 0; i < list.Count; i++)
-        {
-            if (list[i] == remove)
-            {
-                list.RemoveAt(i);
-            }
-        }
     }
 }
 
