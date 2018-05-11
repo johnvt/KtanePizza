@@ -6,26 +6,34 @@ using UnityEngine;
 using KmHelper;
 using Rnd = UnityEngine.Random;
 
+/// <summary>
+/// TODO:
+/// - no duplicate pizza+customer
+/// - stop queue and orders on solve
+/// - check needed on failed order??
+/// </summary>
 public class PizzaModule : MonoBehaviour
 {
     public KMBombInfo Bomb;
     public KMSelectable Module;
     public KMSelectable Order;
+    public GameObject NumServed;
     public KMSelectable[] BeltNodes;
     public KMSelectable[] PlateNodes;
     public GameObject[] Ingredients;
-    public enum Ingredient
-    {
-        Artichokes, Bacon, Basil, BbqSauce, BellPeppers, BlackOlives, Cheddar, GrilledChickenBreast, Ham, ItalianSausage, Jalapeño, Mozzarella, Mushrooms, Mussels, Pepperoni, Pineapple, RedOnions, Scampi, Tomatoes, Tuna
-    }
-    public enum Pizza
-    {
-        Margherita, BbqChicken, BuffaloChicken, Adventure, IScream, FruttiDiMare, Hawaii, MeatLovers, Veggie, BaconCheddar, TunaDelight, QuattroStagioni
-    }
-    public enum Customer
-    {
-        Bob, Carlo, Clair, Frank, Frédérique, Ingrid, Melissa, Natasha, Sandy, Sigmund, Tyrone
-    };
+
+    private int _numToServe = 3;
+    private int _numServed = 0;
+    private int _numOtherIngredients = 6;
+    private float _beltSpeed = 2f;
+    private float _chanceToAddItem = .8f;
+    private float _minWaitForNextOrder = 30f;
+    private float _maxWaitForNextOrder = 60f;
+    private float _minOrderDuration = 50f;
+    private float _maxOrderDuration = 60f;
+
+    private int _moduleId;
+    private static int _moduleIdCounter = 1;
 
     private Dictionary<Ingredient, string> _ingredientNames;
     private Dictionary<Pizza?, PizzaRecipe> _pizzaRecipes;
@@ -36,15 +44,18 @@ public class PizzaModule : MonoBehaviour
     private Customer? _customer;
     private List<Ingredient> _needed = new List<Ingredient>();
 
-    private int _moduleId;
-    private static int _moduleIdCounter = 1;
-
-    private float _beltSpeed = 2f;
-    private float _chanceToAddItem = 1f;
-    private float _minWaitForNextOrder = 2f;
-    private float _maxWaitForNextOrder = 8f;
-    private float _minOrderDuration = 60f;
-    private float _maxOrderDuration = 90f;
+    private enum Ingredient
+    {
+        Artichokes, Bacon, Basil, BbqSauce, BellPeppers, BlackOlives, Cheddar, GrilledChickenBreast, Ham, ItalianSausage, Jalapeño, Mozzarella, Mushrooms, Mussels, Pepperoni, Pineapple, RedOnions, Scampi, Tomatoes, Tuna
+    }
+    private enum Pizza
+    {
+        Margherita, BbqChicken, BuffaloChicken, Adventure, IScream, FruttiDiMare, Hawaii, MeatLovers, Veggie, BaconCheddar, TunaDelight, QuattroStagioni
+    }
+    private enum Customer
+    {
+        Bob, Carlo, Clair, Frank, Frédérique, Ingrid, Melissa, Natasha, Sandy, Sigmund, Tyrone
+    };
 
     void Start()
     {
@@ -306,8 +317,7 @@ public class PizzaModule : MonoBehaviour
                     {
                         _needed.RemoveAt(i);
                     }
-
-                    if (_needed[i] == Ingredient.Bacon)
+                    else if (_needed[i] == Ingredient.Bacon)
                     {
                         if (!Bomb.IsIndicatorPresent(Indicator.CLR))
                         {
@@ -498,10 +508,13 @@ public class PizzaModule : MonoBehaviour
         }
 
         RemoveOrder();
+        EmptyPlate();
     }
 
     private IEnumerator MoveItem(Item item, Vector3 from, Vector3 to, float duration)
     {
+        GetComponent<KMSelectable>().AddInteractionPunch(.1f);
+
         float elapsed = 0;
         while (elapsed < duration)
         {
@@ -540,7 +553,7 @@ public class PizzaModule : MonoBehaviour
 
         // And some random OTHER stuff
         Ingredient ingredient;
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < _numOtherIngredients; i++)
         {
             do
             {
@@ -553,8 +566,6 @@ public class PizzaModule : MonoBehaviour
 
         ingredients.Shuffle();
         _queuedIngredients = new Queue<Ingredient>(ingredients);
-        Debug.LogFormat("[Pizza #{0}] Adding to queue: {1}", _moduleId,
-            String.Join(", ", _queuedIngredients.Select(x => _ingredientNames[x]).ToArray()));
     }
 
     private void GrabItem(int beltIndex)
@@ -599,11 +610,18 @@ public class PizzaModule : MonoBehaviour
 
         if (CheckPlate())
         {
+            GetComponent<KMSelectable>().AddInteractionPunch(.1f);
+
             Debug.LogFormat("[Pizza #{0}] {1} wanted a {2}. {1} got a {2}. {1} happy!",
                 _moduleId,
                 _customer,
                 _pizzaRecipes[_pizza].Name);
-            GetComponent<KMBombModule>().HandlePass();
+            _numServed++;
+            NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
+            if (_numServed == _numToServe)
+            {
+                GetComponent<KMBombModule>().HandlePass();
+            }
         }
         else
         {
@@ -615,8 +633,11 @@ public class PizzaModule : MonoBehaviour
             GetComponent<KMBombModule>().HandleStrike();
         }
         RemoveOrder();
+        EmptyPlate();
+    }
 
-        // Empty plate
+    private void EmptyPlate()
+    {
         for (var i = 0; i < _itemsOnPlate.Count; i++)
         {
             if (_itemsOnPlate[i] is Item)
@@ -625,7 +646,6 @@ public class PizzaModule : MonoBehaviour
                 _itemsOnPlate[i] = null;
             }
         }
-
     }
 
     private bool CheckPlate()
