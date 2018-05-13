@@ -8,9 +8,7 @@ using Rnd = UnityEngine.Random;
 
 /// <summary>
 /// TODO:
-/// - no duplicate pizza+customer
-/// - stop queue and orders on solve
-/// - check needed on failed order??
+/// - add default recipe ingredients
 /// </summary>
 public class PizzaModule : MonoBehaviour
 {
@@ -24,13 +22,14 @@ public class PizzaModule : MonoBehaviour
 
     private int _numToServe = 3;
     private int _numServed = 0;
-    private int _numOtherIngredients = 6;
+    private int _minOtherIngredients = 5;
+    private int _maxOtherIngredients = 7;
     private float _beltSpeed = 2f;
     private float _chanceToAddItem = .8f;
-    private float _minWaitForNextOrder = 30f;
-    private float _maxWaitForNextOrder = 60f;
-    private float _minOrderDuration = 50f;
-    private float _maxOrderDuration = 60f;
+    private int _minWaitForNextOrder = 30;
+    private int _maxWaitForNextOrder = 60;
+    private int _minOrderDuration = 40;
+    private int _maxOrderDuration = 50;
 
     private int _moduleId;
     private static int _moduleIdCounter = 1;
@@ -43,6 +42,8 @@ public class PizzaModule : MonoBehaviour
     private Pizza? _pizza;
     private Customer? _customer;
     private List<Ingredient> _needed = new List<Ingredient>();
+    private List<Pizza?> _servedPizzas = new List<Pizza?>();
+    private List<Customer?> _servedCustomers = new List<Customer?>();
 
     private enum Ingredient
     {
@@ -217,20 +218,23 @@ public class PizzaModule : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(.1f);
+            if (_numServed == _numToServe) yield break;
             if (_customer == null)
             {
                 yield return new WaitForSeconds(Rnd.Range(_minWaitForNextOrder, _maxWaitForNextOrder));
                 StartCoroutine(PlaceOrder());
             }
         }
-
     }
 
     private IEnumerator PlaceOrder()
     {
-        // Random order
-        _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
-        _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
+        // Random order, but not what we succesfully served before
+        do _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
+        while (_servedPizzas.Contains(_pizza));
+
+        do _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
+        while (_servedCustomers.Contains(_customer));
 
         Order.transform.Find("Plane").GetComponent<Renderer>().enabled = true;
         Order.transform.Find("for").GetComponent<Renderer>().enabled = true;
@@ -238,7 +242,7 @@ public class PizzaModule : MonoBehaviour
         Order.transform.Find("Text").GetComponent<Renderer>().enabled = true;
         Order.transform.Find("Text").GetComponent<TextMesh>().text = _pizzaRecipes[_pizza].Name + "\n" + _customer;
 
-        _needed = _pizzaRecipes[_pizza].Ingredients;
+        _needed = new List<Ingredient>(_pizzaRecipes[_pizza].Ingredients);
         int i;
 
         switch (_customer)
@@ -500,7 +504,7 @@ public class PizzaModule : MonoBehaviour
 
         var elapsed = 0f;
         var duration = Rnd.Range(_minOrderDuration, _maxOrderDuration);
-        while (elapsed < duration)
+        while (elapsed < duration && _customer != null)
         {
             yield return null;
             elapsed += Time.deltaTime;
@@ -548,12 +552,32 @@ public class PizzaModule : MonoBehaviour
 
     private void RefreshQueuedIngredients()
     {
-        // Start with the needed ingredients
-        var ingredients = _needed.Count > 0 ? new List<Ingredient>(_needed) : new List<Ingredient>();
+        var ingredients = new List<Ingredient>();
 
-        // And some random OTHER stuff
+        // Determine how many random items we want to add
+        var numOtherIngredients = Rnd.Range(_minOtherIngredients, _maxOtherIngredients);
+
+        // If we have a pizza to make
+        if (_needed.Count > 0)
+        {
+            // Start with the needed ingredients
+            ingredients = new List<Ingredient>(_needed);
+
+            // Then add all items from the original recipe that we don't have already
+            List<Ingredient> originals = _pizzaRecipes[_pizza].Ingredients;
+            foreach (var ingr in originals)
+            {
+                if (!ingredients.Contains(ingr))
+                {
+                    ingredients.Add(ingr);
+                    numOtherIngredients--;
+                }
+            }
+        }
+
+        // If there's still room, add random stuff that we don't need
         Ingredient ingredient;
-        for (var i = 0; i < _numOtherIngredients; i++)
+        for (var i = 0; i < numOtherIngredients; i++)
         {
             do
             {
@@ -566,6 +590,9 @@ public class PizzaModule : MonoBehaviour
 
         ingredients.Shuffle();
         _queuedIngredients = new Queue<Ingredient>(ingredients);
+        Debug.LogFormat("[Pizza #{0}] Adding to queue: {1}",
+            _moduleId,
+            String.Join(", ", _queuedIngredients.Select(x => _ingredientNames[x]).ToArray()));
     }
 
     private void GrabItem(int beltIndex)
@@ -618,9 +645,15 @@ public class PizzaModule : MonoBehaviour
                 _pizzaRecipes[_pizza].Name);
             _numServed++;
             NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
+
+            // Keep track so we don't order the same again
+            _servedPizzas.Add(_pizza);
+            _servedCustomers.Add(_customer);
+
             if (_numServed == _numToServe)
             {
                 GetComponent<KMBombModule>().HandlePass();
+                _queuedIngredients.Clear();
             }
         }
         else
@@ -716,6 +749,7 @@ public class PizzaModule : MonoBehaviour
     {
         _customer = null;
         _pizza = null;
+        _needed.Clear();
         Order.transform.Find("Plane").GetComponent<Renderer>().enabled = false;
         Order.transform.Find("Text").GetComponent<Renderer>().enabled = false;
         Order.transform.Find("for").GetComponent<Renderer>().enabled = false;
