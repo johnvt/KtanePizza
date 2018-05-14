@@ -140,7 +140,7 @@ public class PizzaModule : MonoBehaviour
             PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
-        Order.OnInteract += delegate () { ServeOrder(); return false; };
+        Order.OnInteract += delegate () { PressOrder(); return false; };
 
         StartCoroutine(MoveBelt());
         StartCoroutine(PlaceOrders());
@@ -215,6 +215,10 @@ public class PizzaModule : MonoBehaviour
     {
         RemoveOrder();
 
+        // Open restaurant
+        yield return new WaitForSeconds(3f);
+        GetComponent<KMAudio>().PlaySoundAtTransform("start", transform);
+
         while (true)
         {
             yield return new WaitForSeconds(.1f);
@@ -232,9 +236,11 @@ public class PizzaModule : MonoBehaviour
         // Random order, but not what we succesfully served before
         do _pizza = (Pizza)Rnd.Range(0, Enum.GetValues(typeof(Pizza)).Length);
         while (_servedPizzas.Contains(_pizza));
-
         do _customer = (Customer)Rnd.Range(0, Enum.GetValues(typeof(Customer)).Length);
         while (_servedCustomers.Contains(_customer));
+
+        GetComponent<KMAudio>().PlaySoundAtTransform("order", transform);
+        yield return new WaitForSeconds(3.5f);
 
         Order.transform.Find("Plane").GetComponent<Renderer>().enabled = true;
         Order.transform.Find("for").GetComponent<Renderer>().enabled = true;
@@ -518,6 +524,7 @@ public class PizzaModule : MonoBehaviour
     private IEnumerator MoveItem(Item item, Vector3 from, Vector3 to, float duration)
     {
         GetComponent<KMSelectable>().AddInteractionPunch(.1f);
+        GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
 
         float elapsed = 0;
         while (elapsed < duration)
@@ -631,20 +638,28 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void ServeOrder()
+    private void PressOrder()
     {
         if (_customer == null) return;
+        StartCoroutine(ServeOrder());
+    }
+
+    private IEnumerator ServeOrder()
+    {
+        GetComponent<KMSelectable>().AddInteractionPunch(.1f);
+        GetComponent<KMAudio>().PlaySoundAtTransform("oven", transform);
+
+        yield return new WaitForSeconds(3f);
 
         if (CheckPlate())
         {
-            GetComponent<KMSelectable>().AddInteractionPunch(.1f);
-
             Debug.LogFormat("[Pizza #{0}] {1} wanted a {2}. {1} got a {2}. {1} happy!",
                 _moduleId,
                 _customer,
                 _pizzaRecipes[_pizza].Name);
             _numServed++;
             NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
+            GetComponent<KMAudio>().PlaySoundAtTransform("coin", transform);
 
             // Keep track so we don't order the same again
             _servedPizzas.Add(_pizza);
