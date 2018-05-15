@@ -6,10 +6,11 @@ using UnityEngine;
 using KmHelper;
 using Rnd = UnityEngine.Random;
 
-/// <summary>
-/// TODO:
-/// - add default recipe ingredients
-/// </summary>
+/**
+ * @todo:
+ * Bomb.GetSolvableModuleNames() lists them all, so if you have more than one, it’ll be listed twice.
+ * I guess I could take the lowest module id in that case.
+ */
 public class PizzaModule : MonoBehaviour
 {
     public KMBombInfo Bomb;
@@ -28,7 +29,7 @@ public class PizzaModule : MonoBehaviour
     private float _chanceToAddItem = .8f;
     private int _minWaitForNextOrder = 30;
     private int _maxWaitForNextOrder = 60;
-    private int _minOrderDuration = 40;
+    private int _minOrderDuration = 35;
     private int _maxOrderDuration = 50;
 
     private int _moduleId;
@@ -140,7 +141,7 @@ public class PizzaModule : MonoBehaviour
             PlateNodes[i].OnInteract += delegate () { ReturnItem(j); return false; };
         }
 
-        Order.OnInteract += delegate () { PressOrder(); return false; };
+        Order.OnInteract += delegate () { StartCoroutine(ServeOrder()); return false; };
 
         StartCoroutine(MoveBelt());
         StartCoroutine(PlaceOrders());
@@ -217,6 +218,7 @@ public class PizzaModule : MonoBehaviour
 
         // Open restaurant
         yield return new WaitForSeconds(3f);
+//        var names = Bomb.GetSolvableModuleNames();
         GetComponent<KMAudio>().PlaySoundAtTransform("start", transform);
 
         while (true)
@@ -638,38 +640,24 @@ public class PizzaModule : MonoBehaviour
         }
     }
 
-    private void PressOrder()
-    {
-        if (_customer == null) return;
-        StartCoroutine(ServeOrder());
-    }
-
     private IEnumerator ServeOrder()
     {
+        if (_customer == null) yield break;
+
         GetComponent<KMSelectable>().AddInteractionPunch(.1f);
-        GetComponent<KMAudio>().PlaySoundAtTransform("oven", transform);
+        var correct = CheckPlate();
 
-        yield return new WaitForSeconds(3f);
-
-        if (CheckPlate())
+        if (correct)
         {
             Debug.LogFormat("[Pizza #{0}] {1} wanted a {2}. {1} got a {2}. {1} happy!",
                 _moduleId,
                 _customer,
                 _pizzaRecipes[_pizza].Name);
             _numServed++;
-            NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
-            GetComponent<KMAudio>().PlaySoundAtTransform("coin", transform);
 
             // Keep track so we don't order the same again
             _servedPizzas.Add(_pizza);
             _servedCustomers.Add(_customer);
-
-            if (_numServed == _numToServe)
-            {
-                GetComponent<KMBombModule>().HandlePass();
-                _queuedIngredients.Clear();
-            }
         }
         else
         {
@@ -678,8 +666,26 @@ public class PizzaModule : MonoBehaviour
                 _customer,
                 _pizzaRecipes[_pizza].Name,
                 String.Join(", ", _itemsOnPlate.Where(x => x is Item).Select(x => _ingredientNames[x.Ingredient]).ToArray()));
+        }
+
+        GetComponent<KMAudio>().PlaySoundAtTransform("oven", transform);
+        yield return new WaitForSeconds(2f);
+
+        if (correct)
+        {
+            NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
+            GetComponent<KMAudio>().PlaySoundAtTransform("cash", transform);
+            if (_numServed == _numToServe)
+            {
+                GetComponent<KMBombModule>().HandlePass();
+                _queuedIngredients.Clear();
+            }
+        }
+        else
+        {
             GetComponent<KMBombModule>().HandleStrike();
         }
+
         RemoveOrder();
         EmptyPlate();
     }
