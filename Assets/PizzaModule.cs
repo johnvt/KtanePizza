@@ -218,8 +218,11 @@ public class PizzaModule : MonoBehaviour
 
         // Open restaurant
         yield return new WaitForSeconds(3f);
-//        var names = Bomb.GetSolvableModuleNames();
-        GetComponent<KMAudio>().PlaySoundAtTransform("start", transform);
+        if (_moduleId == _moduleIdCounter - 1)
+        {
+            GetComponent<KMAudio>().PlaySoundAtTransform("start", transform);
+            Debug.LogFormat("[Pizza #{0}] Playing start sound.", _moduleId);
+        }
 
         while (true)
         {
