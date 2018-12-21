@@ -217,7 +217,7 @@ public class PizzaModule : MonoBehaviour
         RemoveOrder();
 
         // Open restaurant
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(6f);
         if (_moduleId == _moduleIdCounter - 1)
         {
             GetComponent<KMAudio>().PlaySoundAtTransform("start", transform);
@@ -369,27 +369,7 @@ public class PizzaModule : MonoBehaviour
 
             case Customer.Frédérique:
 
-                // No Red onions. No FRQ: replace with Cheddar. Lit FRQ: replace with Italian sausage.
-                for (i = _needed.Count - 1; i >= 0; i--)
-                {
-                    if (_needed[i] == Ingredient.RedOnions)
-                    {
-                        _needed.RemoveAt(i);
-                        if (!Bomb.IsIndicatorPresent(Indicator.FRQ))
-                        {
-                            _needed.Add(Ingredient.Cheddar);
-                        }
-                        else if (Bomb.IsIndicatorOn(Indicator.FRQ))
-                        {
-                            _needed.Add(Ingredient.ItalianSausage);
-                        }
-                    }
-                }
-                break;
-
-            case Customer.Ingrid:
-
-                // Replace Tomatoes with Red onions and the other way around. Unlit IND: replace Bell peppers with Mushrooms. Lit IND: replace Mushrooms with Bell peppers.
+                // Replace Tomatoes with Red onions and the other way around. Unlit FRQ: replace Bell peppers with Mushrooms. Lit FRQ: replace Mushrooms with Bell peppers.
                 for (i = _needed.Count - 1; i >= 0; i--)
                 {
                     if (_needed[i] == Ingredient.RedOnions)
@@ -400,13 +380,33 @@ public class PizzaModule : MonoBehaviour
                     {
                         _needed[i] = Ingredient.RedOnions;
                     }
-                    else if (Bomb.IsIndicatorOff(Indicator.IND) && _needed[i] == Ingredient.BellPeppers)
+                    else if (Bomb.IsIndicatorOff(Indicator.FRQ) && _needed[i] == Ingredient.BellPeppers)
                     {
                         _needed[i] = Ingredient.Mushrooms;
                     }
-                    else if (Bomb.IsIndicatorOn(Indicator.IND) && _needed[i] == Ingredient.Mushrooms)
+                    else if (Bomb.IsIndicatorOn(Indicator.FRQ) && _needed[i] == Ingredient.Mushrooms)
                     {
                         _needed[i] = Ingredient.BellPeppers;
+                    }
+                }
+                break;
+
+            case Customer.Ingrid:
+
+                // No Red onions. No IND: replace with Cheddar. Lit IND: replace with Italian sausage.
+                for (i = _needed.Count - 1; i >= 0; i--)
+                {
+                    if (_needed[i] == Ingredient.RedOnions)
+                    {
+                        _needed.RemoveAt(i);
+                        if (!Bomb.IsIndicatorPresent(Indicator.IND))
+                        {
+                            _needed.Add(Ingredient.Cheddar);
+                        }
+                        else if (Bomb.IsIndicatorOn(Indicator.IND))
+                        {
+                            _needed.Add(Ingredient.ItalianSausage);
+                        }
                     }
                 }
                 break;
@@ -677,7 +677,7 @@ public class PizzaModule : MonoBehaviour
         if (correct)
         {
             NumServed.transform.GetComponent<TextMesh>().text = _numServed.ToString() + "/" + _numToServe.ToString();
-            GetComponent<KMAudio>().PlaySoundAtTransform("cash", transform);
+            GetComponent<KMAudio>().PlaySoundAtTransform("yay", transform);
             if (_numServed == _numToServe)
             {
                 GetComponent<KMBombModule>().HandlePass();
